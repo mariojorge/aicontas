@@ -1,0 +1,30 @@
+const express = require('express');
+const IncomeController = require('../controllers/incomeController');
+const db = require('../database/connection');
+
+const router = express.Router();
+
+// Middleware para conectar ao banco
+router.use(async (req, res, next) => {
+  try {
+    if (!db.db) {
+      await db.connect();
+    }
+    next();
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Erro de conexão com banco' });
+  }
+});
+
+// Rotas CRUD
+router.post('/', IncomeController.create);
+router.get('/', IncomeController.getAll);
+router.get('/:id', IncomeController.getById);
+router.put('/:id', IncomeController.update);
+router.delete('/:id', IncomeController.delete);
+
+// Rotas de relatórios
+router.get('/totals/:mes/:ano', IncomeController.getTotalByMonth);
+router.get('/categories/:mes/:ano', IncomeController.getByCategory);
+
+module.exports = router;

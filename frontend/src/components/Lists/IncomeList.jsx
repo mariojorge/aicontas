@@ -1,0 +1,338 @@
+import React from 'react';
+import styled from 'styled-components';
+import { Edit2, Trash2, Calendar, DollarSign, Tag, CheckCircle, Circle } from 'lucide-react';
+import { Card, CardContent, CardGrid } from '../UI/Card';
+import { Button } from '../UI/Button';
+import { Flex } from '../Layout/Container';
+import { PrivateValue } from '../UI/PrivateValue';
+
+const ListContainer = styled.div`
+  width: 100%;
+`;
+
+const TableWrapper = styled.div`
+  background: ${props => props.theme.colors.card};
+  border-radius: ${props => props.theme.borderRadius.lg};
+  border: 1px solid ${props => props.theme.colors.border};
+  overflow: hidden;
+  
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    display: none;
+  }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+`;
+
+const TableHeader = styled.thead`
+  background-color: ${props => props.theme.colors.backgroundTertiary};
+`;
+
+const TableHeaderCell = styled.th`
+  padding: ${props => props.theme.spacing.md};
+  text-align: left;
+  font-weight: 600;
+  color: ${props => props.theme.colors.text};
+  border-bottom: 1px solid ${props => props.theme.colors.border};
+`;
+
+const TableRow = styled.tr`
+  &:hover {
+    background-color: ${props => props.theme.colors.backgroundTertiary};
+  }
+`;
+
+const TableCell = styled.td`
+  padding: ${props => props.theme.spacing.md};
+  border-bottom: 1px solid ${props => props.theme.colors.borderLight};
+`;
+
+const StatusBadge = styled.span`
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.full};
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: ${props => props.status === 'recebido' ? props.theme.colors.success : props.theme.colors.warning};
+  color: white;
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.xs};
+`;
+
+const ActionButton = styled.button`
+  padding: ${props => props.theme.spacing.xs};
+  border-radius: ${props => props.theme.borderRadius.md};
+  background-color: transparent;
+  border: 1px solid ${props => props.theme.colors.border};
+  color: ${props => props.theme.colors.textSecondary};
+  transition: ${props => props.theme.transitions.fast};
+  min-height: 32px;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: ${props => props.theme.colors.backgroundTertiary};
+    color: ${props => props.theme.colors.text};
+  }
+`;
+
+const MobileCardGrid = styled(CardGrid)`
+  display: none;
+  
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    display: grid;
+  }
+`;
+
+const MobileCard = styled(Card)`
+  cursor: pointer;
+`;
+
+const CardRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: ${props => props.theme.spacing.sm};
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const CardLabel = styled.span`
+  font-size: 0.875rem;
+  color: ${props => props.theme.colors.textSecondary};
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.xs};
+`;
+
+const CardValue = styled.span`
+  font-weight: 500;
+  color: ${props => props.theme.colors.text};
+`;
+
+const Description = styled.h4`
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: ${props => props.theme.colors.text};
+  margin-bottom: ${props => props.theme.spacing.sm};
+`;
+
+const Value = styled.span`
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: ${props => props.theme.colors.success};
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: ${props => props.theme.spacing.xxxl};
+  color: ${props => props.theme.colors.textSecondary};
+`;
+
+export const IncomeList = ({ 
+  incomes = [], 
+  onEdit, 
+  onDelete,
+  onToggleStatus,
+  isLoading 
+}) => {
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const formatRecorrencia = (income) => {
+    if (income.repetir === 'fixo') {
+      return 'Receita fixa';
+    } else if (income.repetir === 'parcelado') {
+      return `${income.parcela_atual || 1}/${income.parcelas || 1}`;
+    }
+    return 'Única';
+  };
+
+  if (isLoading) {
+    return (
+      <EmptyState>
+        Carregando receitas...
+      </EmptyState>
+    );
+  }
+
+  if (incomes.length === 0) {
+    return (
+      <EmptyState>
+        <DollarSign size={48} style={{ marginBottom: '1rem' }} />
+        <h3>Nenhuma receita encontrada</h3>
+        <p>Adicione sua primeira receita para começar o controle financeiro.</p>
+      </EmptyState>
+    );
+  }
+
+  return (
+    <ListContainer>
+      {/* Tabela para Desktop */}
+      <TableWrapper>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHeaderCell>Descrição</TableHeaderCell>
+              <TableHeaderCell>Valor</TableHeaderCell>
+              <TableHeaderCell>Situação</TableHeaderCell>
+              <TableHeaderCell>Categoria</TableHeaderCell>
+              <TableHeaderCell>Data</TableHeaderCell>
+              <TableHeaderCell>Recorrência</TableHeaderCell>
+              <TableHeaderCell>Ações</TableHeaderCell>
+            </TableRow>
+          </TableHeader>
+          <tbody>
+            {incomes.map((income) => (
+              <TableRow key={income.id}>
+                <TableCell>
+                  <div>
+                    <strong>{income.descricao}</strong>
+                    {income.subcategoria && (
+                      <div style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                        {income.subcategoria}
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <PrivateValue>
+                    <Value>{formatCurrency(income.valor)}</Value>
+                  </PrivateValue>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={income.situacao}>
+                    {income.situacao === 'recebido' ? 'Recebido' : 'Aberto'}
+                  </StatusBadge>
+                </TableCell>
+                <TableCell>{income.categoria}</TableCell>
+                <TableCell>{formatDate(income.data_recebimento)}</TableCell>
+                <TableCell>
+                  <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                    {formatRecorrencia(income)}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <ActionButtons>
+                    <ActionButton
+                      onClick={() => onToggleStatus && onToggleStatus(income)}
+                      title={income.situacao === 'recebido' ? 'Marcar como aberto' : 'Marcar como recebido'}
+                    >
+                      {income.situacao === 'recebido' ? <Circle size={16} /> : <CheckCircle size={16} />}
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => onEdit && onEdit(income)}
+                      title="Editar"
+                    >
+                      <Edit2 size={16} />
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => onDelete && onDelete(income.id)}
+                      title="Excluir"
+                    >
+                      <Trash2 size={16} />
+                    </ActionButton>
+                  </ActionButtons>
+                </TableCell>
+              </TableRow>
+            ))}
+          </tbody>
+        </Table>
+      </TableWrapper>
+
+      {/* Cards para Mobile */}
+      <MobileCardGrid>
+        {incomes.map((income) => (
+          <MobileCard key={income.id}>
+            <CardContent>
+              <Description>{income.descricao}</Description>
+              
+              <CardRow>
+                <CardLabel>
+                  <DollarSign size={16} />
+                  Valor
+                </CardLabel>
+                <PrivateValue>
+                  <Value>{formatCurrency(income.valor)}</Value>
+                </PrivateValue>
+              </CardRow>
+              
+              <CardRow>
+                <CardLabel>Situação</CardLabel>
+                <StatusBadge status={income.situacao}>
+                  {income.situacao === 'recebido' ? 'Recebido' : 'Aberto'}
+                </StatusBadge>
+              </CardRow>
+              
+              <CardRow>
+                <CardLabel>
+                  <Tag size={16} />
+                  Categoria
+                </CardLabel>
+                <CardValue>
+                  {income.categoria}
+                  {income.subcategoria && ` - ${income.subcategoria}`}
+                </CardValue>
+              </CardRow>
+              
+              <CardRow>
+                <CardLabel>
+                  <Calendar size={16} />
+                  Data
+                </CardLabel>
+                <CardValue>{formatDate(income.data_recebimento)}</CardValue>
+              </CardRow>
+              
+              <CardRow>
+                <CardLabel>Recorrência</CardLabel>
+                <CardValue>{formatRecorrencia(income)}</CardValue>
+              </CardRow>
+              
+              <Flex justify="flex-end" style={{ marginTop: '1rem' }}>
+                <Button
+                  size="small"
+                  variant={income.situacao === 'recebido' ? 'secondary' : 'success'}
+                  onClick={() => onToggleStatus && onToggleStatus(income)}
+                  style={{ marginRight: '0.5rem' }}
+                >
+                  {income.situacao === 'recebido' ? <Circle size={16} /> : <CheckCircle size={16} />}
+                </Button>
+                <Button
+                  size="small"
+                  variant="secondary"
+                  onClick={() => onEdit && onEdit(income)}
+                  style={{ marginRight: '0.5rem' }}
+                >
+                  <Edit2 size={16} />
+                </Button>
+                <Button
+                  size="small"
+                  variant="error"
+                  onClick={() => onDelete && onDelete(income.id)}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </Flex>
+            </CardContent>
+          </MobileCard>
+        ))}
+      </MobileCardGrid>
+    </ListContainer>
+  );
+};
