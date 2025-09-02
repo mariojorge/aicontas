@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
-import { formatCurrency } from '../../utils/maskUtils';
 import { useValueVisibility } from '../../utils/valueVisibility';
 
 const CardsContainer = styled.div`
@@ -106,6 +105,13 @@ export const TotalsCards = ({ totals, type = 'expense' }) => {
       pending: 'A Pagar',
       total: 'Total Geral'
     };
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
   };
 
   const labels = getLabels();

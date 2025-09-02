@@ -121,12 +121,12 @@ class Income {
     }
 
     const fields = Object.keys(data)
-      .filter(key => key !== 'id' && key !== 'descricao')
+      .filter(key => key !== 'id' && key !== 'descricao' && key !== 'data_recebimento')
       .map(key => `${key} = ?`)
       .join(', ');
     
     const values = Object.keys(data)
-      .filter(key => key !== 'id' && key !== 'descricao')
+      .filter(key => key !== 'id' && key !== 'descricao' && key !== 'data_recebimento')
       .map(key => data[key]);
     
     values.push(...params);
