@@ -29,9 +29,11 @@ const addUserIdColumns = async () => {
   }
 };
 
-const initDatabase = async () => {
+const initDatabase = async (shouldConnect = true) => {
   try {
-    await db.connect();
+    if (shouldConnect) {
+      await db.connect();
+    }
     
     // Tabela de despesas
     await db.run(`
@@ -121,7 +123,9 @@ const initDatabase = async () => {
   } catch (error) {
     console.error('❌ Erro ao inicializar banco:', error);
   } finally {
-    await db.close();
+    if (shouldConnect) {
+      await db.close();
+    }
   }
 };
 

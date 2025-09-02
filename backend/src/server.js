@@ -41,6 +41,14 @@ const startServer = async () => {
   try {
     await db.connect();
     
+    // Inicializar banco de dados se necessário
+    const { initDatabase } = require('./database/init');
+    try {
+      await initDatabase(false); // false = não conectar novamente
+    } catch (dbError) {
+      console.error('⚠️  Erro na inicialização do banco (continuando):', dbError);
+    }
+    
     app.listen(PORT, () => {
       console.log(`🚀 Servidor rodando na porta ${PORT}`);
       console.log(`📊 API disponível em http://localhost:${PORT}`);
