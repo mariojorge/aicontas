@@ -3,7 +3,7 @@ const Category = require('../models/category');
 const categoryController = {
   async getAll(req, res) {
     try {
-      const categories = await Category.findAll(req.query);
+      const categories = await Category.findAll({ ...req.query, user_id: req.user.id });
       res.json({
         success: true,
         data: categories,
@@ -20,7 +20,7 @@ const categoryController = {
 
   async getById(req, res) {
     try {
-      const category = await Category.findById(req.params.id);
+      const category = await Category.findById(req.params.id, req.user.id);
       
       if (!category) {
         return res.status(404).json({
@@ -44,7 +44,7 @@ const categoryController = {
 
   async create(req, res) {
     try {
-      const category = await Category.create(req.body);
+      const category = await Category.create({ ...req.body, user_id: req.user.id });
       
       res.status(201).json({
         success: true,
@@ -70,7 +70,7 @@ const categoryController = {
 
   async update(req, res) {
     try {
-      const category = await Category.update(req.params.id, req.body);
+      const category = await Category.update(req.params.id, req.body, req.user.id);
       
       res.json({
         success: true,
@@ -103,7 +103,7 @@ const categoryController = {
 
   async delete(req, res) {
     try {
-      await Category.delete(req.params.id);
+      await Category.delete(req.params.id, req.user.id);
       
       res.json({
         success: true,
@@ -134,7 +134,7 @@ const categoryController = {
 
   async toggleActive(req, res) {
     try {
-      const result = await Category.toggleActive(req.params.id);
+      const result = await Category.toggleActive(req.params.id, req.user.id);
       
       res.json({
         success: true,

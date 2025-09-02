@@ -4,7 +4,7 @@ class IncomeController {
   static async create(req, res) {
     try {
       console.log('💰 Criando receita:', req.body);
-      const incomeData = req.body;
+      const incomeData = { ...req.body, user_id: req.user.id };
       
       // Se for parcelado, criar múltiplos lançamentos
       if (incomeData.repetir === 'parcelado' && incomeData.parcelas > 1) {
@@ -72,7 +72,8 @@ class IncomeController {
         situacao: req.query.situacao,
         categoria: req.query.categoria,
         mes: req.query.mes,
-        ano: req.query.ano
+        ano: req.query.ano,
+        user_id: req.user.id
       };
 
       const incomes = await Income.findAll(filters);
@@ -84,7 +85,7 @@ class IncomeController {
 
   static async getById(req, res) {
     try {
-      const income = await Income.findById(req.params.id);
+      const income = await Income.findById(req.params.id, req.user.id);
       
       if (!income) {
         return res.status(404).json({ success: false, error: 'Receita não encontrada' });
@@ -101,7 +102,7 @@ class IncomeController {
       console.log('📝 Atualizando receita ID:', req.params.id);
       console.log('📋 Dados para atualizar:', req.body);
       
-      const currentIncome = await Income.findById(req.params.id);
+      const currentIncome = await Income.findById(req.params.id, req.user.id);
       if (!currentIncome) {
         return res.status(404).json({ success: false, error: 'Receita não encontrada' });
       }
@@ -112,10 +113,10 @@ class IncomeController {
         
         if (updateAll) {
           // Atualizar todas as receitas abertas do grupo
-          await Income.updateGroup(currentIncome.descricao, currentIncome.repetir, updateData, true);
+          await Income.updateGroup(currentIncome.descricao, currentIncome.repetir, updateData, true, req.user.id);
           
           // Buscar receitas atualizadas para retornar
-          const updatedIncomes = await Income.findByGroup(currentIncome.descricao, currentIncome.repetir);
+          const updatedIncomes = await Income.findByGroup(currentIncome.descricao, currentIncome.repetir, req.user.id);
           console.log(`✅ ${updatedIncomes.filter(i => i.situacao === 'aberto').length} receitas do grupo atualizadas`);
           
           return res.json({ success: true, data: updatedIncomes, updated_count: updatedIncomes.filter(i => i.situacao === 'aberto').length });
@@ -124,7 +125,7 @@ class IncomeController {
       
       // Atualizar apenas o lançamento atual
       const { updateAll, ...updateData } = req.body;
-      const income = await Income.update(req.params.id, updateData);
+      const income = await Income.update(req.params.id, updateData, req.user.id);
       console.log('✅ Receita atualizada:', income);
       res.json({ success: true, data: income });
     } catch (error) {
@@ -139,7 +140,7 @@ class IncomeController {
 
   static async delete(req, res) {
     try {
-      const result = await Income.delete(req.params.id);
+      const result = await Income.delete(req.params.id, req.user.id);
       res.json({ success: true, ...result });
     } catch (error) {
       if (error.message === 'Receita não encontrada') {
@@ -152,7 +153,7 @@ class IncomeController {
   static async getTotalByMonth(req, res) {
     try {
       const { mes, ano } = req.params;
-      const totals = await Income.getTotalByMonth(mes, ano);
+      const totals = await Income.getTotalByMonth(mes, ano, req.user.id);
       res.json({ success: true, data: totals });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -163,7 +164,7 @@ class IncomeController {
     try {
       const { mes, ano } = req.params;
       const { situacao } = req.query;
-      const categories = await Income.getByCategory(mes, ano, situacao);
+      const categories = await Income.getByCategory(mes, ano, situacao, req.user.id);
       res.json({ success: true, data: categories });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });

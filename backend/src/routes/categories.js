@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const categoryController = require('../controllers/categoryController');
+const { authenticateToken } = require('../middleware/auth');
+
+// Middleware de autenticação para todas as rotas
+router.use(authenticateToken);
 
 router.get('/', categoryController.getAll);
 router.get('/:id', categoryController.getById);

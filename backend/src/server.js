@@ -9,6 +9,7 @@ const expenseRoutes = require('./routes/expenses');
 const incomeRoutes = require('./routes/incomes');
 const categoryRoutes = require('./routes/categories');
 const creditCardRoutes = require('./routes/creditCards');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +19,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Rotas públicas (autenticação)
+app.use('/api/auth', authRoutes);
+
+// Rotas protegidas (requerem autenticação)
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/incomes', incomeRoutes);
 app.use('/api/categories', categoryRoutes);

@@ -1,5 +1,6 @@
 const express = require('express');
 const IncomeController = require('../controllers/incomeController');
+const { authenticateToken } = require('../middleware/auth');
 const db = require('../database/connection');
 
 const router = express.Router();
@@ -15,6 +16,9 @@ router.use(async (req, res, next) => {
     res.status(500).json({ success: false, error: 'Erro de conexão com banco' });
   }
 });
+
+// Middleware de autenticação para todas as rotas
+router.use(authenticateToken);
 
 // Rotas CRUD
 router.post('/', IncomeController.create);

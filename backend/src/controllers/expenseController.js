@@ -4,7 +4,7 @@ class ExpenseController {
   static async create(req, res) {
     try {
       console.log('📝 Criando despesa:', req.body);
-      const expenseData = req.body;
+      const expenseData = { ...req.body, user_id: req.user.id };
       
       // Se for parcelado, criar múltiplos lançamentos
       if (expenseData.repetir === 'parcelado' && expenseData.parcelas > 1) {
@@ -72,7 +72,8 @@ class ExpenseController {
         situacao: req.query.situacao,
         categoria: req.query.categoria,
         mes: req.query.mes,
-        ano: req.query.ano
+        ano: req.query.ano,
+        user_id: req.user.id
       };
 
       const expenses = await Expense.findAll(filters);
@@ -84,7 +85,7 @@ class ExpenseController {
 
   static async getById(req, res) {
     try {
-      const expense = await Expense.findById(req.params.id);
+      const expense = await Expense.findById(req.params.id, req.user.id);
       
       if (!expense) {
         return res.status(404).json({ success: false, error: 'Despesa não encontrada' });
@@ -101,7 +102,7 @@ class ExpenseController {
       console.log('📝 Atualizando despesa ID:', req.params.id);
       console.log('📋 Dados para atualizar:', req.body);
       
-      const currentExpense = await Expense.findById(req.params.id);
+      const currentExpense = await Expense.findById(req.params.id, req.user.id);
       if (!currentExpense) {
         return res.status(404).json({ success: false, error: 'Despesa não encontrada' });
       }
@@ -112,10 +113,10 @@ class ExpenseController {
         
         if (updateAll) {
           // Atualizar todos os lançamentos abertos do grupo
-          await Expense.updateGroup(currentExpense.descricao, currentExpense.repetir, updateData, true);
+          await Expense.updateGroup(currentExpense.descricao, currentExpense.repetir, updateData, true, req.user.id);
           
           // Buscar lançamentos atualizados para retornar
-          const updatedExpenses = await Expense.findByGroup(currentExpense.descricao, currentExpense.repetir);
+          const updatedExpenses = await Expense.findByGroup(currentExpense.descricao, currentExpense.repetir, req.user.id);
           console.log(`✅ ${updatedExpenses.filter(e => e.situacao === 'aberto').length} despesas do grupo atualizadas`);
           
           return res.json({ success: true, data: updatedExpenses, updated_count: updatedExpenses.filter(e => e.situacao === 'aberto').length });
@@ -124,7 +125,7 @@ class ExpenseController {
       
       // Atualizar apenas o lançamento atual
       const { updateAll, ...updateData } = req.body;
-      const expense = await Expense.update(req.params.id, updateData);
+      const expense = await Expense.update(req.params.id, updateData, req.user.id);
       console.log('✅ Despesa atualizada:', expense);
       res.json({ success: true, data: expense });
     } catch (error) {
@@ -139,7 +140,7 @@ class ExpenseController {
 
   static async delete(req, res) {
     try {
-      const result = await Expense.delete(req.params.id);
+      const result = await Expense.delete(req.params.id, req.user.id);
       res.json({ success: true, ...result });
     } catch (error) {
       if (error.message === 'Despesa não encontrada') {
@@ -152,7 +153,7 @@ class ExpenseController {
   static async getTotalByMonth(req, res) {
     try {
       const { mes, ano } = req.params;
-      const totals = await Expense.getTotalByMonth(mes, ano);
+      const totals = await Expense.getTotalByMonth(mes, ano, req.user.id);
       res.json({ success: true, data: totals });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -163,7 +164,7 @@ class ExpenseController {
     try {
       const { mes, ano } = req.params;
       const { situacao } = req.query;
-      const categories = await Expense.getByCategory(mes, ano, situacao);
+      const categories = await Expense.getByCategory(mes, ano, situacao, req.user.id);
       res.json({ success: true, data: categories });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -172,7 +173,7 @@ class ExpenseController {
 
   static async getAllGrouped(req, res) {
     try {
-      const grouped = await Expense.findAllGroupedByCard(req.query);
+      const grouped = await Expense.findAllGroupedByCard({ ...req.query, user_id: req.user.id });
       
       res.json({
         success: true,

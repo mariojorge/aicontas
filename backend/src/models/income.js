@@ -26,22 +26,23 @@ class Income {
       data_recebimento,
       repetir = 'nao',
       parcelas = 1,
-      parcela_atual = 1
+      parcela_atual = 1,
+      user_id
     } = data;
 
     const result = await db.run(`
       INSERT INTO incomes (
         descricao, valor, situacao, categoria, subcategoria, 
-        data_recebimento, repetir, parcelas, parcela_atual
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [descricao, valor, situacao, categoria, subcategoria, data_recebimento, repetir, parcelas, parcela_atual]);
+        data_recebimento, repetir, parcelas, parcela_atual, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [descricao, valor, situacao, categoria, subcategoria, data_recebimento, repetir, parcelas, parcela_atual, user_id]);
 
     return { id: result.id, ...data };
   }
 
   static async findAll(filters = {}) {
-    let sql = 'SELECT * FROM incomes WHERE 1=1';
-    const params = [];
+    let sql = 'SELECT * FROM incomes WHERE user_id = ?';
+    const params = [filters.user_id];
 
     if (filters.situacao) {
       sql += ' AND situacao = ?';
@@ -64,32 +65,32 @@ class Income {
     return await db.all(sql, params);
   }
 
-  static async findById(id) {
-    return await db.get('SELECT * FROM incomes WHERE id = ?', [id]);
+  static async findById(id, userId) {
+    return await db.get('SELECT * FROM incomes WHERE id = ? AND user_id = ?', [id, userId]);
   }
 
-  static async update(id, data) {
+  static async update(id, data, userId) {
     const updateSchema = incomeSchema.partial();
     await updateSchema.validate(data);
 
     const fields = Object.keys(data).map(key => `${key} = ?`).join(', ');
     const values = Object.values(data);
-    values.push(id);
+    values.push(id, userId);
 
     const result = await db.run(`
       UPDATE incomes SET ${fields}, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = ?
+      WHERE id = ? AND user_id = ?
     `, values);
 
     if (result.changes === 0) {
       throw new Error('Receita não encontrada');
     }
 
-    return await this.findById(id);
+    return await this.findById(id, userId);
   }
 
-  static async delete(id) {
-    const result = await db.run('DELETE FROM incomes WHERE id = ?', [id]);
+  static async delete(id, userId) {
+    const result = await db.run('DELETE FROM incomes WHERE id = ? AND user_id = ?', [id, userId]);
     
     if (result.changes === 0) {
       throw new Error('Receita não encontrada');
@@ -98,22 +99,22 @@ class Income {
     return { message: 'Receita excluída com sucesso' };
   }
 
-  static async findByGroup(descricao, repetir) {
+  static async findByGroup(descricao, repetir, userId) {
     if (repetir === 'nao') return [];
     
     const baseDescricao = descricao.replace(/ \(\d+\/\d+\)$/, '');
     return await db.all(`
       SELECT * FROM incomes 
-      WHERE descricao LIKE ? AND repetir = ?
+      WHERE descricao LIKE ? AND repetir = ? AND user_id = ?
       ORDER BY parcela_atual
-    `, [`${baseDescricao}%`, repetir]);
+    `, [`${baseDescricao}%`, repetir, userId]);
   }
 
-  static async updateGroup(baseDescricao, repetir, data, updateAllOpen = false) {
+  static async updateGroup(baseDescricao, repetir, data, updateAllOpen = false, userId) {
     const baseDesc = baseDescricao.replace(/ \(\d+\/\d+\)$/, '');
     
-    let whereClause = 'descricao LIKE ? AND repetir = ?';
-    let params = [`${baseDesc}%`, repetir];
+    let whereClause = 'descricao LIKE ? AND repetir = ? AND user_id = ?';
+    let params = [`${baseDesc}%`, repetir, userId];
     
     if (updateAllOpen) {
       whereClause += ' AND situacao = "aberto"';
@@ -138,15 +139,15 @@ class Income {
     return result;
   }
 
-  static async getTotalByMonth(mes, ano) {
+  static async getTotalByMonth(mes, ano, userId) {
     const result = await db.get(`
       SELECT 
         SUM(CASE WHEN situacao = 'recebido' THEN valor ELSE 0 END) as total_recebido,
         SUM(CASE WHEN situacao = 'aberto' THEN valor ELSE 0 END) as total_aberto,
         SUM(valor) as total_geral
       FROM incomes 
-      WHERE strftime("%m", data_recebimento) = ? AND strftime("%Y", data_recebimento) = ?
-    `, [mes.toString().padStart(2, '0'), ano.toString()]);
+      WHERE strftime("%m", data_recebimento) = ? AND strftime("%Y", data_recebimento) = ? AND user_id = ?
+    `, [mes.toString().padStart(2, '0'), ano.toString(), userId]);
 
     return {
       total_recebido: result.total_recebido || 0,
@@ -155,17 +156,17 @@ class Income {
     };
   }
 
-  static async getByCategory(mes, ano, situacao = null) {
+  static async getByCategory(mes, ano, situacao = null, userId) {
     let sql = `
       SELECT 
         categoria,
         SUM(valor) as total,
         COUNT(*) as quantidade
       FROM incomes 
-      WHERE strftime("%m", data_recebimento) = ? AND strftime("%Y", data_recebimento) = ?
+      WHERE strftime("%m", data_recebimento) = ? AND strftime("%Y", data_recebimento) = ? AND user_id = ?
     `;
     
-    const params = [mes.toString().padStart(2, '0'), ano.toString()];
+    const params = [mes.toString().padStart(2, '0'), ano.toString(), userId];
     
     if (situacao) {
       sql += ` AND situacao = ?`;

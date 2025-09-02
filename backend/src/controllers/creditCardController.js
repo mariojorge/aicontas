@@ -3,7 +3,7 @@ const CreditCard = require('../models/creditCard');
 const creditCardController = {
   async getAll(req, res) {
     try {
-      const cards = await CreditCard.findAll(req.query);
+      const cards = await CreditCard.findAll({ ...req.query, user_id: req.user.id });
       res.json({
         success: true,
         data: cards,
@@ -20,7 +20,7 @@ const creditCardController = {
 
   async getById(req, res) {
     try {
-      const card = await CreditCard.findById(req.params.id);
+      const card = await CreditCard.findById(req.params.id, req.user.id);
       
       if (!card) {
         return res.status(404).json({
@@ -44,7 +44,7 @@ const creditCardController = {
 
   async create(req, res) {
     try {
-      const card = await CreditCard.create(req.body);
+      const card = await CreditCard.create({ ...req.body, user_id: req.user.id });
       
       res.status(201).json({
         success: true,
@@ -70,7 +70,7 @@ const creditCardController = {
 
   async update(req, res) {
     try {
-      const card = await CreditCard.update(req.params.id, req.body);
+      const card = await CreditCard.update(req.params.id, req.body, req.user.id);
       
       res.json({
         success: true,
@@ -103,7 +103,7 @@ const creditCardController = {
 
   async delete(req, res) {
     try {
-      await CreditCard.delete(req.params.id);
+      await CreditCard.delete(req.params.id, req.user.id);
       
       res.json({
         success: true,
@@ -127,7 +127,7 @@ const creditCardController = {
 
   async toggleActive(req, res) {
     try {
-      const result = await CreditCard.toggleActive(req.params.id);
+      const result = await CreditCard.toggleActive(req.params.id, req.user.id);
       
       res.json({
         success: true,

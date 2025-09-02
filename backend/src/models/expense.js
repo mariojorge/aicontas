@@ -28,15 +28,16 @@ class Expense {
       repetir = 'nao',
       parcelas = 1,
       parcela_atual = 1,
-      cartao_credito_id = null
+      cartao_credito_id = null,
+      user_id
     } = data;
 
     const result = await db.run(`
       INSERT INTO expenses (
         descricao, valor, situacao, categoria, subcategoria, 
-        data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [descricao, valor, situacao, categoria, subcategoria, data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id]);
+        data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [descricao, valor, situacao, categoria, subcategoria, data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id, user_id]);
 
     return { id: result.id, ...data };
   }
@@ -49,9 +50,9 @@ class Expense {
         cc.bandeira as cartao_bandeira
       FROM expenses e
       LEFT JOIN credit_cards cc ON e.cartao_credito_id = cc.id
-      WHERE 1=1
+      WHERE e.user_id = ?
     `;
-    const params = [];
+    const params = [filters.user_id];
 
     if (filters.situacao) {
       sql += ' AND e.situacao = ?';
@@ -74,32 +75,32 @@ class Expense {
     return await db.all(sql, params);
   }
 
-  static async findById(id) {
-    return await db.get('SELECT * FROM expenses WHERE id = ?', [id]);
+  static async findById(id, userId) {
+    return await db.get('SELECT * FROM expenses WHERE id = ? AND user_id = ?', [id, userId]);
   }
 
-  static async update(id, data) {
+  static async update(id, data, userId) {
     const updateSchema = expenseSchema.partial();
     await updateSchema.validate(data);
 
     const fields = Object.keys(data).map(key => `${key} = ?`).join(', ');
     const values = Object.values(data);
-    values.push(id);
+    values.push(id, userId);
 
     const result = await db.run(`
       UPDATE expenses SET ${fields}, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = ?
+      WHERE id = ? AND user_id = ?
     `, values);
 
     if (result.changes === 0) {
       throw new Error('Despesa não encontrada');
     }
 
-    return await this.findById(id);
+    return await this.findById(id, userId);
   }
 
-  static async delete(id) {
-    const result = await db.run('DELETE FROM expenses WHERE id = ?', [id]);
+  static async delete(id, userId) {
+    const result = await db.run('DELETE FROM expenses WHERE id = ? AND user_id = ?', [id, userId]);
     
     if (result.changes === 0) {
       throw new Error('Despesa não encontrada');
@@ -108,22 +109,22 @@ class Expense {
     return { message: 'Despesa excluída com sucesso' };
   }
 
-  static async findByGroup(descricao, repetir) {
+  static async findByGroup(descricao, repetir, userId) {
     if (repetir === 'nao') return [];
     
     const baseDescricao = descricao.replace(/ \(\d+\/\d+\)$/, '');
     return await db.all(`
       SELECT * FROM expenses 
-      WHERE descricao LIKE ? AND repetir = ?
+      WHERE descricao LIKE ? AND repetir = ? AND user_id = ?
       ORDER BY parcela_atual
-    `, [`${baseDescricao}%`, repetir]);
+    `, [`${baseDescricao}%`, repetir, userId]);
   }
 
-  static async updateGroup(baseDescricao, repetir, data, updateAllOpen = false) {
+  static async updateGroup(baseDescricao, repetir, data, updateAllOpen = false, userId) {
     const baseDesc = baseDescricao.replace(/ \(\d+\/\d+\)$/, '');
     
-    let whereClause = 'descricao LIKE ? AND repetir = ?';
-    let params = [`${baseDesc}%`, repetir];
+    let whereClause = 'descricao LIKE ? AND repetir = ? AND user_id = ?';
+    let params = [`${baseDesc}%`, repetir, userId];
     
     if (updateAllOpen) {
       whereClause += ' AND situacao = "aberto"';
@@ -148,15 +149,15 @@ class Expense {
     return result;
   }
 
-  static async getTotalByMonth(mes, ano) {
+  static async getTotalByMonth(mes, ano, userId) {
     const result = await db.get(`
       SELECT 
         SUM(CASE WHEN situacao = 'pago' THEN valor ELSE 0 END) as total_pago,
         SUM(CASE WHEN situacao = 'aberto' THEN valor ELSE 0 END) as total_aberto,
         SUM(valor) as total_geral
       FROM expenses 
-      WHERE strftime("%m", data_pagamento) = ? AND strftime("%Y", data_pagamento) = ?
-    `, [mes.toString().padStart(2, '0'), ano.toString()]);
+      WHERE strftime("%m", data_pagamento) = ? AND strftime("%Y", data_pagamento) = ? AND user_id = ?
+    `, [mes.toString().padStart(2, '0'), ano.toString(), userId]);
 
     return {
       total_pago: result.total_pago || 0,
@@ -165,17 +166,17 @@ class Expense {
     };
   }
 
-  static async getByCategory(mes, ano, situacao = null) {
+  static async getByCategory(mes, ano, situacao = null, userId) {
     let sql = `
       SELECT 
         categoria,
         SUM(valor) as total,
         COUNT(*) as quantidade
       FROM expenses 
-      WHERE strftime("%m", data_pagamento) = ? AND strftime("%Y", data_pagamento) = ?
+      WHERE strftime("%m", data_pagamento) = ? AND strftime("%Y", data_pagamento) = ? AND user_id = ?
     `;
     
-    const params = [mes.toString().padStart(2, '0'), ano.toString()];
+    const params = [mes.toString().padStart(2, '0'), ano.toString(), userId];
     
     if (situacao) {
       sql += ` AND situacao = ?`;
@@ -195,9 +196,9 @@ class Expense {
         cc.bandeira as cartao_bandeira
       FROM expenses e
       LEFT JOIN credit_cards cc ON e.cartao_credito_id = cc.id
-      WHERE 1=1
+      WHERE e.user_id = ?
     `;
-    const params = [];
+    const params = [filters.user_id];
 
     if (filters.situacao) {
       sql += ' AND e.situacao = ?';

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, DollarSign, Eye, EyeOff } from 'lucide-react';
+import { Menu, X, DollarSign, Eye, EyeOff, LogOut, User } from 'lucide-react';
 import { Container } from './Container';
 import { getValueVisibility, toggleValueVisibility } from '../../utils/valueVisibility';
+import { useAuth } from '../../contexts/AuthContext';
 
 const HeaderContainer = styled.header`
   background-color: ${props => props.theme.colors.primary};
@@ -126,10 +127,39 @@ const VisibilityButton = styled.button`
   }
 `;
 
+const UserInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  color: white;
+  font-size: 0.875rem;
+  
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    display: none;
+  }
+`;
+
+const LogoutButton = styled.button`
+  color: white;
+  padding: ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.md};
+  transition: ${props => props.theme.transitions.fast};
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: ${props => props.theme.colors.primaryLight};
+  }
+`;
+
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [valuesVisible, setValuesVisible] = useState(true);
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     setValuesVisible(getValueVisibility());
@@ -155,6 +185,11 @@ export const Header = () => {
 
   const isActive = (path) => {
     return location.pathname === path;
+  };
+
+  const handleLogout = () => {
+    logout();
+    closeMenu();
   };
 
   return (
@@ -212,6 +247,10 @@ export const Header = () => {
           </Nav>
           
           <ActionButtons>
+            <UserInfo>
+              <User size={16} />
+              Olá, {user?.nome?.split(' ')[0] || 'Usuário'}
+            </UserInfo>
             <VisibilityButton 
               onClick={handleToggleVisibility} 
               aria-label={valuesVisible ? 'Ocultar valores' : 'Mostrar valores'}
@@ -219,6 +258,13 @@ export const Header = () => {
             >
               {valuesVisible ? <Eye size={20} /> : <EyeOff size={20} />}
             </VisibilityButton>
+            <LogoutButton
+              onClick={handleLogout}
+              aria-label="Sair"
+              title="Sair"
+            >
+              <LogOut size={20} />
+            </LogoutButton>
             <MenuButton onClick={toggleMenu} aria-label="Toggle menu">
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </MenuButton>
