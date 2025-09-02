@@ -4,6 +4,7 @@ import { Container, Section, Flex } from '../components/Layout/Container';
 import { Button } from '../components/UI/Button';
 import { MonthSelector } from '../components/UI/MonthSelector';
 import { ValueConfirmModal } from '../components/UI/ValueConfirmModal';
+import { TotalsCards } from '../components/UI/TotalsCards';
 import { SimpleIncomeForm as IncomeForm } from '../components/Forms/SimpleIncomeForm.jsx';
 import { IncomeList } from '../components/Lists/IncomeList.jsx';
 import { incomeService } from '../services/api';
@@ -11,6 +12,7 @@ import { saveSelectedMonth, getSelectedMonth } from '../utils/sessionStorage';
 
 export const Incomes = () => {
   const [incomes, setIncomes] = useState([]);
+  const [totals, setTotals] = useState({ total_recebido: 0, total_aberto: 0, total_geral: 0 });
   const [showForm, setShowForm] = useState(false);
   const [editingIncome, setEditingIncome] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,16 +35,26 @@ export const Incomes = () => {
   const fetchIncomes = async (month = selectedMonth, year = selectedYear) => {
     try {
       setIsLoading(true);
+      const monthStr = (month + 1).toString().padStart(2, '0');
+      const yearStr = year.toString();
+      
       const filters = {
-        mes: (month + 1).toString().padStart(2, '0'),
-        ano: year.toString()
+        mes: monthStr,
+        ano: yearStr
       };
       
-      const response = await incomeService.getAll(filters);
-      setIncomes(response.data || []);
+      // Buscar receitas e totais em paralelo
+      const [incomesResponse, totalsResponse] = await Promise.all([
+        incomeService.getAll(filters),
+        incomeService.getTotalByMonth(monthStr, yearStr)
+      ]);
+      
+      setIncomes(incomesResponse.data || []);
+      setTotals(totalsResponse.data || { total_recebido: 0, total_aberto: 0, total_geral: 0 });
     } catch (error) {
       console.error('Erro ao carregar receitas:', error);
       setIncomes([]);
+      setTotals({ total_recebido: 0, total_aberto: 0, total_geral: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -155,6 +167,10 @@ export const Incomes = () => {
             selectedYear={selectedYear}
             onMonthChange={handleMonthChange}
           />
+        )}
+
+        {!showForm && (
+          <TotalsCards totals={totals} type="income" />
         )}
 
         {showForm ? (

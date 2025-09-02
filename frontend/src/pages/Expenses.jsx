@@ -4,6 +4,7 @@ import { Container, Section, Flex } from '../components/Layout/Container';
 import { Button } from '../components/UI/Button';
 import { MonthSelector } from '../components/UI/MonthSelector';
 import { ValueConfirmModal } from '../components/UI/ValueConfirmModal';
+import { TotalsCards } from '../components/UI/TotalsCards';
 import { SimpleExpenseForm as ExpenseForm } from '../components/Forms/SimpleExpenseForm.jsx';
 import { ExpenseList } from '../components/Lists/ExpenseList.jsx';
 import { expenseService } from '../services/api';
@@ -11,6 +12,7 @@ import { saveSelectedMonth, getSelectedMonth } from '../utils/sessionStorage';
 
 export const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
+  const [totals, setTotals] = useState({ total_pago: 0, total_aberto: 0, total_geral: 0 });
   const [showForm, setShowForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,16 +35,26 @@ export const Expenses = () => {
   const fetchExpenses = async (month = selectedMonth, year = selectedYear) => {
     try {
       setIsLoading(true);
+      const monthStr = (month + 1).toString().padStart(2, '0');
+      const yearStr = year.toString();
+      
       const filters = {
-        mes: (month + 1).toString().padStart(2, '0'),
-        ano: year.toString()
+        mes: monthStr,
+        ano: yearStr
       };
       
-      const response = await expenseService.getAll(filters);
-      setExpenses(response.data || []);
+      // Buscar despesas e totais em paralelo
+      const [expensesResponse, totalsResponse] = await Promise.all([
+        expenseService.getAll(filters),
+        expenseService.getTotalByMonth(monthStr, yearStr)
+      ]);
+      
+      setExpenses(expensesResponse.data || []);
+      setTotals(totalsResponse.data || { total_pago: 0, total_aberto: 0, total_geral: 0 });
     } catch (error) {
       console.error('Erro ao carregar despesas:', error);
       setExpenses([]);
+      setTotals({ total_pago: 0, total_aberto: 0, total_geral: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -155,6 +167,10 @@ export const Expenses = () => {
             selectedYear={selectedYear}
             onMonthChange={handleMonthChange}
           />
+        )}
+
+        {!showForm && (
+          <TotalsCards totals={totals} type="expense" />
         )}
 
         {showForm ? (

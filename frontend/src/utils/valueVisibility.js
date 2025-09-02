@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 const STORAGE_KEY = 'finance_values_visible';
 
 export const getValueVisibility = () => {
@@ -14,4 +16,24 @@ export const toggleValueVisibility = () => {
   const newValue = !current;
   setValueVisibility(newValue);
   return newValue;
+};
+
+export const useValueVisibility = () => {
+  const [isVisible, setIsVisible] = useState(() => getValueVisibility());
+
+  useEffect(() => {
+    const handleVisibilityChange = (event) => {
+      if (event.detail && event.detail.visible !== undefined) {
+        setIsVisible(event.detail.visible);
+      }
+    };
+
+    window.addEventListener('valueVisibilityChanged', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('valueVisibilityChanged', handleVisibilityChange);
+    };
+  }, []);
+
+  return { isVisible };
 };
