@@ -32,6 +32,20 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Finance Control API is running' });
 });
 
+// Servir arquivos estáticos do frontend (se existir a pasta public)
+const publicPath = path.join(__dirname, '../public');
+if (require('fs').existsSync(publicPath)) {
+  app.use(express.static(publicPath));
+  
+  // Para SPAs, redirecionar rotas de frontend (não-API) para o index.html
+  app.get('*', (req, res) => {
+    // Só serve o index.html se não for uma rota de API ou health
+    if (!req.path.startsWith('/api') && req.path !== '/health') {
+      res.sendFile(path.join(publicPath, 'index.html'));
+    }
+  });
+}
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Algo deu errado!' });
