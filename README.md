@@ -73,7 +73,7 @@ npm run init-db
 cd backend
 npm run dev
 ```
-O servidor estará disponível em: http://localhost:3001
+O servidor estará disponível em: http://localhost:3000
 
 **Frontend (Terminal 2):**
 ```bash
