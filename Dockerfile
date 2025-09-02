@@ -1,5 +1,8 @@
 # Multi-stage build combining frontend and backend
 
+# Accept port as build argument
+ARG APP_PORT=3000
+
 # Stage 1: Build frontend
 FROM node:20-slim AS frontend-build
 WORKDIR /app/frontend
@@ -10,6 +13,9 @@ RUN npm run build
 
 # Stage 2: Final image with backend serving frontend
 FROM node:20-slim
+
+# Accept port as build argument in final stage
+ARG APP_PORT=3000
 
 WORKDIR /app
 
@@ -30,8 +36,8 @@ RUN mkdir -p ./data && chown -R node:node ./data && chown -R node:node /app
 # Switch to non-root user
 USER node
 
-# Expose port
-EXPOSE 3000
+# Expose port using build argument
+EXPOSE ${APP_PORT}
 
 # Start backend (which will serve both API and static files)
 CMD ["npm", "start"]

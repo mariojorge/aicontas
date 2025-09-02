@@ -3,19 +3,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - APP_PORT=${APP_PORT:-3000}
     container_name: finance-app
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      - PORT=3000
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${APP_PORT:-3000}
       - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-change-this}
       - DB_PATH=/app/data/finance.db
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:${APP_PORT:-3000}"
     volumes:
       - backend_data:/app/data
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:${APP_PORT:-3000}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
