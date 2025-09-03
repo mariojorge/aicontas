@@ -14,7 +14,11 @@ const authRoutes = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Desabilitar CSP que pode forçar HTTPS
+  hsts: false, // Desabilitar HTTP Strict Transport Security
+  crossOriginEmbedderPolicy: false // Permitir carregamento de recursos externos
+}));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
