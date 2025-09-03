@@ -12,6 +12,17 @@ export default defineConfig(({ mode }) => {
   
   return {
     plugins: [react()],
+    base: './',
+    build: {
+      rollupOptions: {
+        output: {
+          // Garantir que os assets usem URLs relativas
+          entryFileNames: 'assets/[name]-[hash].js',
+          chunkFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash].[ext]'
+        }
+      }
+    },
     server: {
       port: parseInt(env.VITE_PORT || '5173'),
       proxy: {
