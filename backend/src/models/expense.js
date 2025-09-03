@@ -6,7 +6,6 @@ const expenseSchema = yup.object().shape({
   valor: yup.number().required('Valor é obrigatório').positive('Valor deve ser positivo'),
   situacao: yup.string().oneOf(['pago', 'aberto'], 'Situação deve ser "pago" ou "aberto"').required('Situação é obrigatória'),
   categoria: yup.string().required('Categoria é obrigatória'),
-  subcategoria: yup.string().nullable().optional(),
   data_pagamento: yup.string().required('Data de pagamento é obrigatória'),
   repetir: yup.string().oneOf(['nao', 'parcelado', 'fixo']).optional(),
   parcelas: yup.number().integer().positive().optional(),
@@ -23,7 +22,6 @@ class Expense {
       valor,
       situacao,
       categoria,
-      subcategoria,
       data_pagamento,
       repetir = 'nao',
       parcelas = 1,
@@ -34,10 +32,10 @@ class Expense {
 
     const result = await db.run(`
       INSERT INTO expenses (
-        descricao, valor, situacao, categoria, subcategoria, 
+        descricao, valor, situacao, categoria, 
         data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [descricao, valor, situacao, categoria, subcategoria, data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id, user_id]);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [descricao, valor, situacao, categoria, data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id, user_id]);
 
     return { id: result.id, ...data };
   }

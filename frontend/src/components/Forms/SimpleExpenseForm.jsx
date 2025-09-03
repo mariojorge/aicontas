@@ -31,7 +31,6 @@ export const SimpleExpenseForm = ({ onSubmit, initialData, isLoading }) => {
       valor: valorNumerico,
       situacao: 'aberto',
       categoria: formData.get('categoria'),
-      subcategoria: formData.get('subcategoria') || '',
       data_pagamento: formData.get('data_pagamento'),
       repetir: currentRepetir,
       parcelas: currentRepetir === 'parcelado' ? parseInt(formData.get('parcelas')) : 1,
@@ -135,22 +134,6 @@ export const SimpleExpenseForm = ({ onSubmit, initialData, isLoading }) => {
                 defaultValue={initialData?.valor ? formatCurrency(initialData.valor * 100) : ''}
                 onInput={applyCurrencyMask}
                 onKeyDown={handleCurrencyKeyDown}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '0.375rem',
-                  minHeight: '44px'
-                }}
-              />
-            </div>
-            
-            <div>
-              <label>Subcategoria</label>
-              <input
-                name="subcategoria"
-                placeholder="Ex: Compras, Combustível..."
-                defaultValue={initialData?.subcategoria}
                 style={{
                   width: '100%',
                   padding: '0.5rem',

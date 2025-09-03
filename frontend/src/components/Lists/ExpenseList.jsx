@@ -302,11 +302,6 @@ export const ExpenseList = ({
                 <TableCell>
                   <div>
                     <strong>{expense.descricao}</strong>
-                    {expense.subcategoria && (
-                      <div style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                        {expense.subcategoria}
-                      </div>
-                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -405,11 +400,6 @@ export const ExpenseList = ({
                       <TableCell style={{ paddingLeft: '3rem' }}>
                         <div>
                           <strong>{expense.descricao}</strong>
-                          {expense.subcategoria && (
-                            <div style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                              {expense.subcategoria}
-                            </div>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -487,7 +477,6 @@ export const ExpenseList = ({
                 </CardLabel>
                 <CardValue>
                   {expense.categoria}
-                  {expense.subcategoria && ` - ${expense.subcategoria}`}
                 </CardValue>
               </CardRow>
               
@@ -586,7 +575,6 @@ export const ExpenseList = ({
                           </CardLabel>
                           <CardValue>
                             {expense.categoria}
-                            {expense.subcategoria && ` - ${expense.subcategoria}`}
                           </CardValue>
                         </CardRow>
                         

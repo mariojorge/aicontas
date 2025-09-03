@@ -6,7 +6,6 @@ const incomeSchema = yup.object().shape({
   valor: yup.number().required('Valor é obrigatório').positive('Valor deve ser positivo'),
   situacao: yup.string().oneOf(['recebido', 'aberto'], 'Situação deve ser "recebido" ou "aberto"').required('Situação é obrigatória'),
   categoria: yup.string().required('Categoria é obrigatória'),
-  subcategoria: yup.string().nullable().optional(),
   data_recebimento: yup.string().required('Data de recebimento é obrigatória'),
   repetir: yup.string().oneOf(['nao', 'parcelado', 'fixo']).optional(),
   parcelas: yup.number().integer().positive().optional(),
@@ -22,7 +21,6 @@ class Income {
       valor,
       situacao,
       categoria,
-      subcategoria,
       data_recebimento,
       repetir = 'nao',
       parcelas = 1,
@@ -32,10 +30,10 @@ class Income {
 
     const result = await db.run(`
       INSERT INTO incomes (
-        descricao, valor, situacao, categoria, subcategoria, 
+        descricao, valor, situacao, categoria, 
         data_recebimento, repetir, parcelas, parcela_atual, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [descricao, valor, situacao, categoria, subcategoria, data_recebimento, repetir, parcelas, parcela_atual, user_id]);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [descricao, valor, situacao, categoria, data_recebimento, repetir, parcelas, parcela_atual, user_id]);
 
     return { id: result.id, ...data };
   }

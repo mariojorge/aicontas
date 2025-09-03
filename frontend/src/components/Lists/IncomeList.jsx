@@ -204,11 +204,6 @@ export const IncomeList = ({
                 <TableCell>
                   <div>
                     <strong>{income.descricao}</strong>
-                    {income.subcategoria && (
-                      <div style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                        {income.subcategoria}
-                      </div>
-                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -287,7 +282,6 @@ export const IncomeList = ({
                 </CardLabel>
                 <CardValue>
                   {income.categoria}
-                  {income.subcategoria && ` - ${income.subcategoria}`}
                 </CardValue>
               </CardRow>
               

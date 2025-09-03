@@ -17,7 +17,6 @@ const schema = yup.object().shape({
   valor: yup.string().required('Valor é obrigatório'),
   situacao: yup.string().oneOf(['recebido', 'aberto'], 'Situação deve ser "recebido" ou "aberto"').required('Situação é obrigatória'),
   categoria: yup.string().required('Categoria é obrigatória'),
-  subcategoria: yup.string(),
   data_recebimento: yup.string().required('Data de recebimento é obrigatória'),
   repetir: yup.string().oneOf(['nao', 'parcelado', 'fixo'], 'Repetir deve ser "não", "parcelado" ou "fixo"'),
   parcelas: yup.number().integer().positive().when('repetir', {
@@ -140,13 +139,6 @@ export const IncomeForm = ({ onSubmit, initialData, isLoading }) => {
               options={categoriaOptions}
               {...register('categoria')}
               error={errors.categoria?.message}
-            />
-            
-            <Input
-              label="Subcategoria"
-              placeholder="Ex: Salário, Extra..."
-              {...register('subcategoria')}
-              error={errors.subcategoria?.message}
             />
             
             <Input

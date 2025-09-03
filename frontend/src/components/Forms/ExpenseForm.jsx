@@ -17,7 +17,6 @@ const schema = yup.object().shape({
   valor: yup.string().required('Valor é obrigatório'),
   situacao: yup.string().oneOf(['pago', 'aberto'], 'Situação deve ser "pago" ou "aberto"').required('Situação é obrigatória'),
   categoria: yup.string().required('Categoria é obrigatória'),
-  subcategoria: yup.string(),
   data_pagamento: yup.string().required('Data de pagamento é obrigatória'),
   repetir: yup.string().oneOf(['nao', 'parcelado', 'fixo'], 'Repetir deve ser "não", "parcelado" ou "fixo"'),
   parcelas: yup.number().integer().positive().when('repetir', {
@@ -141,13 +140,6 @@ export const ExpenseForm = ({ onSubmit, initialData, isLoading }) => {
               options={categoriaOptions}
               {...register('categoria')}
               error={errors.categoria?.message}
-            />
-            
-            <Input
-              label="Subcategoria"
-              placeholder="Ex: Compras, Combustível..."
-              {...register('subcategoria')}
-              error={errors.subcategoria?.message}
             />
             
             <Input
