@@ -131,8 +131,9 @@ export const SimpleIncomeForm = ({ onSubmit, initialData, isLoading }) => {
               <select
                 name="categoria"
                 required
-                defaultValue={initialData?.categoria}
+                defaultValue={!loadingCategories ? initialData?.categoria : ''}
                 disabled={loadingCategories}
+                key={loadingCategories ? 'loading' : 'loaded'}
                 style={{
                   width: '100%',
                   padding: '0.5rem',
