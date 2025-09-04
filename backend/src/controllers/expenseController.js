@@ -1,4 +1,5 @@
 const Expense = require('../models/expense');
+const { parseLocalDate, formatDateToString } = require('../utils/dateHelper');
 
 class ExpenseController {
   static async create(req, res) {
@@ -9,16 +10,22 @@ class ExpenseController {
       // Se for parcelado, criar múltiplos lançamentos
       if (expenseData.repetir === 'parcelado' && expenseData.parcelas > 1) {
         const expenses = [];
-        const baseDate = new Date(expenseData.data_pagamento);
+        const baseDate = parseLocalDate(expenseData.data_pagamento);
         
         for (let i = 1; i <= expenseData.parcelas; i++) {
           const parcelaDate = new Date(baseDate);
-          parcelaDate.setMonth(baseDate.getMonth() + (i - 1));
+          // Preserva o dia original ao adicionar meses
+          const targetMonth = baseDate.getMonth() + (i - 1);
+          const targetYear = baseDate.getFullYear() + Math.floor(targetMonth / 12);
+          const finalMonth = targetMonth % 12;
+          const lastDayOfTargetMonth = new Date(targetYear, finalMonth + 1, 0).getDate();
+          const dayToSet = Math.min(baseDate.getDate(), lastDayOfTargetMonth);
+          parcelaDate.setFullYear(targetYear, finalMonth, dayToSet);
           
           const parcelaData = {
             ...expenseData,
             descricao: `${expenseData.descricao} (${i}/${expenseData.parcelas})`,
-            data_pagamento: parcelaDate.toISOString().split('T')[0],
+            data_pagamento: formatDateToString(parcelaDate),
             parcela_atual: i
           };
           
@@ -33,17 +40,20 @@ class ExpenseController {
       // Se for fixo mensal, criar lançamentos até dezembro do ano atual
       if (expenseData.repetir === 'fixo') {
         const expenses = [];
-        const baseDate = new Date(expenseData.data_pagamento);
+        const baseDate = parseLocalDate(expenseData.data_pagamento);
         const currentYear = new Date().getFullYear();
         const startMonth = baseDate.getMonth();
         const endMonth = 11; // Dezembro (0-based)
         
         for (let month = startMonth; month <= endMonth; month++) {
-          const fixaDate = new Date(currentYear, month, baseDate.getDate());
+          // Preserva o dia original, ajustando para o último dia do mês se necessário
+          const lastDayOfMonth = new Date(currentYear, month + 1, 0).getDate();
+          const dayToSet = Math.min(baseDate.getDate(), lastDayOfMonth);
+          const fixaDate = new Date(currentYear, month, dayToSet);
           
           const fixaData = {
             ...expenseData,
-            data_pagamento: fixaDate.toISOString().split('T')[0],
+            data_pagamento: formatDateToString(fixaDate),
             parcela_atual: 1
           };
           
@@ -55,8 +65,13 @@ class ExpenseController {
         return res.status(201).json({ success: true, data: expenses });
       }
       
-      // Lançamento único
-      const expense = await Expense.create(expenseData);
+      // Lançamento único - corrigir data antes de salvar
+      const processedData = {
+        ...expenseData,
+        data_pagamento: formatDateToString(parseLocalDate(expenseData.data_pagamento))
+      };
+      
+      const expense = await Expense.create(processedData);
       console.log('✅ Despesa criada:', expense);
       res.status(201).json({ success: true, data: expense });
     } catch (error) {
@@ -111,6 +126,11 @@ class ExpenseController {
       if (currentExpense.repetir !== 'nao' && req.body.updateAll !== undefined) {
         const { updateAll, ...updateData } = req.body;
         
+        // Processar data se existir
+        if (updateData.data_pagamento) {
+          updateData.data_pagamento = formatDateToString(parseLocalDate(updateData.data_pagamento));
+        }
+        
         if (updateAll) {
           // Atualizar todos os lançamentos abertos do grupo
           await Expense.updateGroup(currentExpense.descricao, currentExpense.repetir, updateData, true, req.user.id);
@@ -125,6 +145,12 @@ class ExpenseController {
       
       // Atualizar apenas o lançamento atual
       const { updateAll, ...updateData } = req.body;
+      
+      // Processar data se existir
+      if (updateData.data_pagamento) {
+        updateData.data_pagamento = formatDateToString(parseLocalDate(updateData.data_pagamento));
+      }
+      
       const expense = await Expense.update(req.params.id, updateData, req.user.id);
       console.log('✅ Despesa atualizada:', expense);
       res.json({ success: true, data: expense });

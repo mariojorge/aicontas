@@ -1,4 +1,5 @@
 const Income = require('../models/income');
+const { parseLocalDate, formatDateToString } = require('../utils/dateHelper');
 
 class IncomeController {
   static async create(req, res) {
@@ -9,16 +10,22 @@ class IncomeController {
       // Se for parcelado, criar múltiplos lançamentos
       if (incomeData.repetir === 'parcelado' && incomeData.parcelas > 1) {
         const incomes = [];
-        const baseDate = new Date(incomeData.data_recebimento);
+        const baseDate = parseLocalDate(incomeData.data_recebimento);
         
         for (let i = 1; i <= incomeData.parcelas; i++) {
           const parcelaDate = new Date(baseDate);
-          parcelaDate.setMonth(baseDate.getMonth() + (i - 1));
+          // Preserva o dia original ao adicionar meses
+          const targetMonth = baseDate.getMonth() + (i - 1);
+          const targetYear = baseDate.getFullYear() + Math.floor(targetMonth / 12);
+          const finalMonth = targetMonth % 12;
+          const lastDayOfTargetMonth = new Date(targetYear, finalMonth + 1, 0).getDate();
+          const dayToSet = Math.min(baseDate.getDate(), lastDayOfTargetMonth);
+          parcelaDate.setFullYear(targetYear, finalMonth, dayToSet);
           
           const parcelaData = {
             ...incomeData,
             descricao: `${incomeData.descricao} (${i}/${incomeData.parcelas})`,
-            data_recebimento: parcelaDate.toISOString().split('T')[0],
+            data_recebimento: formatDateToString(parcelaDate),
             parcela_atual: i
           };
           
@@ -33,17 +40,20 @@ class IncomeController {
       // Se for fixo mensal, criar lançamentos até dezembro do ano atual
       if (incomeData.repetir === 'fixo') {
         const incomes = [];
-        const baseDate = new Date(incomeData.data_recebimento);
+        const baseDate = parseLocalDate(incomeData.data_recebimento);
         const currentYear = new Date().getFullYear();
         const startMonth = baseDate.getMonth();
         const endMonth = 11; // Dezembro (0-based)
         
         for (let month = startMonth; month <= endMonth; month++) {
-          const fixaDate = new Date(currentYear, month, baseDate.getDate());
+          // Preserva o dia original, ajustando para o último dia do mês se necessário
+          const lastDayOfMonth = new Date(currentYear, month + 1, 0).getDate();
+          const dayToSet = Math.min(baseDate.getDate(), lastDayOfMonth);
+          const fixaDate = new Date(currentYear, month, dayToSet);
           
           const fixaData = {
             ...incomeData,
-            data_recebimento: fixaDate.toISOString().split('T')[0],
+            data_recebimento: formatDateToString(fixaDate),
             parcela_atual: 1
           };
           
@@ -55,8 +65,12 @@ class IncomeController {
         return res.status(201).json({ success: true, data: incomes });
       }
       
-      // Lançamento único
-      const income = await Income.create(incomeData);
+      // Lançamento único - corrigir data antes de salvar
+      const processedData = {
+        ...incomeData,
+        data_recebimento: formatDateToString(parseLocalDate(incomeData.data_recebimento))
+      };
+      const income = await Income.create(processedData);
       console.log('✅ Receita criada:', income);
       res.status(201).json({ success: true, data: income });
     } catch (error) {
@@ -111,6 +125,11 @@ class IncomeController {
       if (currentIncome.repetir !== 'nao' && req.body.updateAll !== undefined) {
         const { updateAll, ...updateData } = req.body;
         
+        // Processar data se existir
+        if (updateData.data_recebimento) {
+          updateData.data_recebimento = formatDateToString(parseLocalDate(updateData.data_recebimento));
+        }
+        
         if (updateAll) {
           // Atualizar todas as receitas abertas do grupo
           await Income.updateGroup(currentIncome.descricao, currentIncome.repetir, updateData, true, req.user.id);
@@ -125,6 +144,12 @@ class IncomeController {
       
       // Atualizar apenas o lançamento atual
       const { updateAll, ...updateData } = req.body;
+      
+      // Processar data se existir
+      if (updateData.data_recebimento) {
+        updateData.data_recebimento = formatDateToString(parseLocalDate(updateData.data_recebimento));
+      }
+      
       const income = await Income.update(req.params.id, updateData, req.user.id);
       console.log('✅ Receita atualizada:', income);
       res.json({ success: true, data: income });
