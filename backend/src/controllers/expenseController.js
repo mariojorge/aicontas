@@ -11,6 +11,7 @@ class ExpenseController {
       if (expenseData.repetir === 'parcelado' && expenseData.parcelas > 1) {
         const expenses = [];
         const baseDate = parseLocalDate(expenseData.data_pagamento);
+        const groupId = Expense.generateGroupId(); // Gerar group_id único para o grupo
         
         for (let i = 1; i <= expenseData.parcelas; i++) {
           const parcelaDate = new Date(baseDate);
@@ -26,14 +27,15 @@ class ExpenseController {
             ...expenseData,
             descricao: `${expenseData.descricao} (${i}/${expenseData.parcelas})`,
             data_pagamento: formatDateToString(parcelaDate),
-            parcela_atual: i
+            parcela_atual: i,
+            group_id: groupId // Usar o mesmo group_id para todas as parcelas
           };
           
           const expense = await Expense.create(parcelaData);
           expenses.push(expense);
         }
         
-        console.log(`✅ ${expenses.length} parcelas criadas`);
+        console.log(`✅ ${expenses.length} parcelas criadas com group_id: ${groupId}`);
         return res.status(201).json({ success: true, data: expenses });
       }
       
@@ -44,6 +46,7 @@ class ExpenseController {
         const currentYear = new Date().getFullYear();
         const startMonth = baseDate.getMonth();
         const endMonth = 11; // Dezembro (0-based)
+        const groupId = Expense.generateGroupId(); // Gerar group_id único para o grupo
         
         for (let month = startMonth; month <= endMonth; month++) {
           // Preserva o dia original, ajustando para o último dia do mês se necessário
@@ -54,14 +57,15 @@ class ExpenseController {
           const fixaData = {
             ...expenseData,
             data_pagamento: formatDateToString(fixaDate),
-            parcela_atual: 1
+            parcela_atual: 1,
+            group_id: groupId // Usar o mesmo group_id para todos os lançamentos fixos
           };
           
           const expense = await Expense.create(fixaData);
           expenses.push(expense);
         }
         
-        console.log(`✅ ${expenses.length} lançamentos fixos criados até dezembro`);
+        console.log(`✅ ${expenses.length} lançamentos fixos criados até dezembro com group_id: ${groupId}`);
         return res.status(201).json({ success: true, data: expenses });
       }
       
@@ -211,6 +215,31 @@ class ExpenseController {
         message: 'Erro ao listar despesas agrupadas',
         error: error.message
       });
+    }
+  }
+
+  static async getGroupByDescription(req, res) {
+    try {
+      const { descricao, repetir, group_id } = req.query;
+      
+      // Se group_id foi fornecido, usar o novo método
+      if (group_id) {
+        const groupItems = await Expense.findByGroupId(group_id, req.user.id);
+        return res.json({ success: true, data: groupItems });
+      }
+      
+      // Método legado usando descrição e repetir
+      if (!descricao || !repetir) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Parâmetros descricao e repetir são obrigatórios (ou use group_id)' 
+        });
+      }
+
+      const groupItems = await Expense.findByGroup(descricao, repetir, req.user.id);
+      res.json({ success: true, data: groupItems });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 }

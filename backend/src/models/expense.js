@@ -1,5 +1,6 @@
 const db = require('../database/connection');
 const yup = require('yup');
+const { v4: uuidv4 } = require('uuid');
 
 const expenseSchema = yup.object().shape({
   descricao: yup.string().required('Descrição é obrigatória').min(3, 'Descrição deve ter pelo menos 3 caracteres'),
@@ -10,7 +11,8 @@ const expenseSchema = yup.object().shape({
   repetir: yup.string().oneOf(['nao', 'parcelado', 'fixo']).optional(),
   parcelas: yup.number().integer().positive().optional(),
   parcela_atual: yup.number().integer().positive().optional(),
-  cartao_credito_id: yup.number().integer().positive().nullable().optional()
+  cartao_credito_id: yup.number().integer().positive().nullable().optional(),
+  group_id: yup.string().optional()
 });
 
 class Expense {
@@ -27,17 +29,22 @@ class Expense {
       parcelas = 1,
       parcela_atual = 1,
       cartao_credito_id = null,
+      group_id = null,
       user_id
     } = data;
 
     const result = await db.run(`
       INSERT INTO expenses (
         descricao, valor, situacao, categoria, 
-        data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [descricao, valor, situacao, categoria, data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id, user_id]);
+        data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id, group_id, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [descricao, valor, situacao, categoria, data_pagamento, repetir, parcelas, parcela_atual, cartao_credito_id, group_id, user_id]);
 
     return { id: result.id, ...data };
+  }
+  
+  static generateGroupId() {
+    return uuidv4();
   }
 
   static async findAll(filters = {}) {
@@ -107,15 +114,37 @@ class Expense {
     return { message: 'Despesa excluída com sucesso' };
   }
 
+  static async findByGroupId(groupId, userId) {
+    if (!groupId) return [];
+    
+    return await db.all(`
+      SELECT * FROM expenses 
+      WHERE group_id = ? AND user_id = ?
+      ORDER BY parcela_atual, data_pagamento
+    `, [groupId, userId]);
+  }
+  
+  // Método legado mantido para compatibilidade
   static async findByGroup(descricao, repetir, userId) {
     if (repetir === 'nao') return [];
     
     const baseDescricao = descricao.replace(/ \(\d+\/\d+\)$/, '');
-    return await db.all(`
-      SELECT * FROM expenses 
-      WHERE descricao LIKE ? AND repetir = ? AND user_id = ?
-      ORDER BY parcela_atual
-    `, [`${baseDescricao}%`, repetir, userId]);
+    
+    // Para fixas, buscar pela descrição exata
+    // Para parceladas, buscar pela descrição base com padrão (x/y)
+    if (repetir === 'fixo') {
+      return await db.all(`
+        SELECT * FROM expenses 
+        WHERE descricao = ? AND repetir = ? AND user_id = ?
+        ORDER BY data_pagamento
+      `, [baseDescricao, repetir, userId]);
+    } else {
+      return await db.all(`
+        SELECT * FROM expenses 
+        WHERE descricao LIKE ? AND repetir = ? AND user_id = ?
+        ORDER BY parcela_atual
+      `, [`${baseDescricao}%`, repetir, userId]);
+    }
   }
 
   static async updateGroup(baseDescricao, repetir, data, updateAllOpen = false, userId) {

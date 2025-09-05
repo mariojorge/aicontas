@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { Edit2, Trash2, Calendar, DollarSign, Tag, CheckCircle, Circle } from 'lucide-react';
 import { Card, CardContent, CardGrid } from '../UI/Card';
 import { Button } from '../UI/Button';
 import { Flex } from '../Layout/Container';
 import { PrivateValue } from '../UI/PrivateValue';
+import { GroupItemsModal } from '../UI/GroupItemsModal';
+import { incomeService } from '../../services/api';
 
 const ListContainer = styled.div`
   width: 100%;
@@ -125,6 +127,17 @@ const Description = styled.h4`
   margin-bottom: ${props => props.theme.spacing.sm};
 `;
 
+const ClickableDescription = styled.span`
+  cursor: pointer;
+  transition: ${props => props.theme.transitions.fast};
+  color: ${props => props.clickable ? props.theme.colors.primary : props.theme.colors.text};
+  
+  &:hover {
+    color: ${props => props.clickable ? props.theme.colors.primaryHover : props.theme.colors.text};
+    text-decoration: ${props => props.clickable ? 'underline' : 'none'};
+  }
+`;
+
 const Value = styled.span`
   font-size: 1.25rem;
   font-weight: 700;
@@ -144,6 +157,10 @@ export const IncomeList = ({
   onToggleStatus,
   isLoading 
 }) => {
+  const [groupModal, setGroupModal] = useState({ 
+    isOpen: false, 
+    groupData: null 
+  });
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -165,6 +182,42 @@ export const IncomeList = ({
       return `${income.parcela_atual || 1}/${income.parcelas || 1}`;
     }
     return 'Única';
+  };
+
+  const isGroupClickable = (income) => {
+    return income.repetir === 'fixo' || income.repetir === 'parcelado';
+  };
+
+  const handleDescriptionClick = (income) => {
+    if (isGroupClickable(income)) {
+      setGroupModal({
+        isOpen: true,
+        groupData: income
+      });
+    }
+  };
+
+  const handleCloseGroupModal = () => {
+    setGroupModal({
+      isOpen: false,
+      groupData: null
+    });
+  };
+
+  const handleFetchGroup = async (descricao, repetir, groupId) => {
+    try {
+      // Preferir group_id se disponível
+      if (groupId) {
+        const response = await incomeService.getGroupById(groupId);
+        return response.data;
+      }
+      // Fallback para método legado
+      const response = await incomeService.getGroup(descricao, repetir);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar grupo:', error);
+      throw error;
+    }
   };
 
   if (isLoading) {
@@ -206,7 +259,12 @@ export const IncomeList = ({
               <TableRow key={income.id}>
                 <TableCell>
                   <div>
-                    <strong>{income.descricao}</strong>
+                    <ClickableDescription 
+                      clickable={isGroupClickable(income)}
+                      onClick={() => handleDescriptionClick(income)}
+                    >
+                      <strong>{income.descricao}</strong>
+                    </ClickableDescription>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -259,7 +317,14 @@ export const IncomeList = ({
         {incomes.map((income) => (
           <MobileCard key={income.id}>
             <CardContent>
-              <Description>{income.descricao}</Description>
+              <Description>
+                <ClickableDescription 
+                  clickable={isGroupClickable(income)}
+                  onClick={() => handleDescriptionClick(income)}
+                >
+                  {income.descricao}
+                </ClickableDescription>
+              </Description>
               
               <CardRow>
                 <CardLabel>
@@ -330,6 +395,14 @@ export const IncomeList = ({
           </MobileCard>
         ))}
       </MobileCardGrid>
+
+      <GroupItemsModal
+        isOpen={groupModal.isOpen}
+        onClose={handleCloseGroupModal}
+        groupData={groupModal.groupData}
+        type="income"
+        onFetchGroup={handleFetchGroup}
+      />
     </ListContainer>
   );
 };

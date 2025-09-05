@@ -20,15 +20,16 @@ router.use(async (req, res, next) => {
 // Middleware de autenticação para todas as rotas
 router.use(authenticateToken);
 
+// Rotas de relatórios (devem vir antes das rotas com parâmetros)
+router.get('/totals/:mes/:ano', IncomeController.getTotalByMonth);
+router.get('/categories/:mes/:ano', IncomeController.getByCategory);
+router.get('/group', IncomeController.getGroupByDescription);
+
 // Rotas CRUD
 router.post('/', IncomeController.create);
 router.get('/', IncomeController.getAll);
 router.get('/:id', IncomeController.getById);
 router.put('/:id', IncomeController.update);
 router.delete('/:id', IncomeController.delete);
-
-// Rotas de relatórios
-router.get('/totals/:mes/:ano', IncomeController.getTotalByMonth);
-router.get('/categories/:mes/:ano', IncomeController.getByCategory);
 
 module.exports = router;

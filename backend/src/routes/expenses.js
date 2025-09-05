@@ -20,16 +20,17 @@ router.use(async (req, res, next) => {
 // Middleware de autenticação para todas as rotas
 router.use(authenticateToken);
 
+// Rotas de relatórios (devem vir antes das rotas com parâmetros)
+router.get('/totals/:mes/:ano', ExpenseController.getTotalByMonth);
+router.get('/categories/:mes/:ano', ExpenseController.getByCategory);
+router.get('/grouped', ExpenseController.getAllGrouped);
+router.get('/group', ExpenseController.getGroupByDescription);
+
 // Rotas CRUD
 router.post('/', ExpenseController.create);
 router.get('/', ExpenseController.getAll);
 router.get('/:id', ExpenseController.getById);
 router.put('/:id', ExpenseController.update);
 router.delete('/:id', ExpenseController.delete);
-
-// Rotas de relatórios
-router.get('/totals/:mes/:ano', ExpenseController.getTotalByMonth);
-router.get('/categories/:mes/:ano', ExpenseController.getByCategory);
-router.get('/grouped', ExpenseController.getAllGrouped);
 
 module.exports = router;

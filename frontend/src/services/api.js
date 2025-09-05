@@ -82,6 +82,20 @@ export const expenseService = {
   async getAllGrouped(filters = {}) {
     const response = await api.get('/expenses/grouped', { params: filters });
     return response.data;
+  },
+
+  async getGroup(descricao, repetir) {
+    const response = await api.get('/expenses/group', { 
+      params: { descricao, repetir } 
+    });
+    return response.data;
+  },
+
+  async getGroupById(groupId) {
+    const response = await api.get('/expenses/group', { 
+      params: { group_id: groupId } 
+    });
+    return response.data;
   }
 };
 
@@ -119,6 +133,20 @@ export const incomeService = {
   async getByCategory(mes, ano, situacao = null) {
     const params = situacao ? { situacao } : {};
     const response = await api.get(`/incomes/categories/${mes}/${ano}`, { params });
+    return response.data;
+  },
+
+  async getGroup(descricao, repetir) {
+    const response = await api.get('/incomes/group', { 
+      params: { descricao, repetir } 
+    });
+    return response.data;
+  },
+
+  async getGroupById(groupId) {
+    const response = await api.get('/incomes/group', { 
+      params: { group_id: groupId } 
+    });
     return response.data;
   }
 };

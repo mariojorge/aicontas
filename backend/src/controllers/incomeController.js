@@ -11,6 +11,7 @@ class IncomeController {
       if (incomeData.repetir === 'parcelado' && incomeData.parcelas > 1) {
         const incomes = [];
         const baseDate = parseLocalDate(incomeData.data_recebimento);
+        const groupId = Income.generateGroupId(); // Gerar group_id único para o grupo
         
         for (let i = 1; i <= incomeData.parcelas; i++) {
           const parcelaDate = new Date(baseDate);
@@ -26,14 +27,15 @@ class IncomeController {
             ...incomeData,
             descricao: `${incomeData.descricao} (${i}/${incomeData.parcelas})`,
             data_recebimento: formatDateToString(parcelaDate),
-            parcela_atual: i
+            parcela_atual: i,
+            group_id: groupId // Usar o mesmo group_id para todas as parcelas
           };
           
           const income = await Income.create(parcelaData);
           incomes.push(income);
         }
         
-        console.log(`✅ ${incomes.length} parcelas criadas`);
+        console.log(`✅ ${incomes.length} parcelas criadas com group_id: ${groupId}`);
         return res.status(201).json({ success: true, data: incomes });
       }
       
@@ -44,6 +46,7 @@ class IncomeController {
         const currentYear = new Date().getFullYear();
         const startMonth = baseDate.getMonth();
         const endMonth = 11; // Dezembro (0-based)
+        const groupId = Income.generateGroupId(); // Gerar group_id único para o grupo
         
         for (let month = startMonth; month <= endMonth; month++) {
           // Preserva o dia original, ajustando para o último dia do mês se necessário
@@ -54,14 +57,15 @@ class IncomeController {
           const fixaData = {
             ...incomeData,
             data_recebimento: formatDateToString(fixaDate),
-            parcela_atual: 1
+            parcela_atual: 1,
+            group_id: groupId // Usar o mesmo group_id para todos os lançamentos fixos
           };
           
           const income = await Income.create(fixaData);
           incomes.push(income);
         }
         
-        console.log(`✅ ${incomes.length} lançamentos fixos criados até dezembro`);
+        console.log(`✅ ${incomes.length} lançamentos fixos criados até dezembro com group_id: ${groupId}`);
         return res.status(201).json({ success: true, data: incomes });
       }
       
@@ -191,6 +195,31 @@ class IncomeController {
       const { situacao } = req.query;
       const categories = await Income.getByCategory(mes, ano, situacao, req.user.id);
       res.json({ success: true, data: categories });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  static async getGroupByDescription(req, res) {
+    try {
+      const { descricao, repetir, group_id } = req.query;
+      
+      // Se group_id foi fornecido, usar o novo método
+      if (group_id) {
+        const groupItems = await Income.findByGroupId(group_id, req.user.id);
+        return res.json({ success: true, data: groupItems });
+      }
+      
+      // Método legado usando descrição e repetir
+      if (!descricao || !repetir) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Parâmetros descricao e repetir são obrigatórios (ou use group_id)' 
+        });
+      }
+
+      const groupItems = await Income.findByGroup(descricao, repetir, req.user.id);
+      res.json({ success: true, data: groupItems });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }

@@ -25,6 +25,7 @@
     "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.2",
     "sqlite3": "^5.1.6",
+    "uuid": "^9.0.1",
     "yup": "^1.2.0"
   },
   "devDependencies": {

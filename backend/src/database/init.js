@@ -1,4 +1,123 @@
 const db = require('./connection');
+const { v4: uuidv4 } = require('uuid');
+
+const addGroupIdColumns = async () => {
+  try {
+    // Verificar se a coluna group_id já existe nas tabelas
+    const expensesColumns = await db.all("PRAGMA table_info(expenses)");
+    const incomesColumns = await db.all("PRAGMA table_info(incomes)");
+
+    // Adicionar group_id à tabela expenses se não existir
+    if (!expensesColumns.find(col => col.name === 'group_id')) {
+      await db.run('ALTER TABLE expenses ADD COLUMN group_id TEXT');
+      console.log('✅ Coluna group_id adicionada à tabela expenses');
+      
+      // Migrar dados existentes de expenses
+      await migrateExistingExpenseGroups();
+    }
+
+    // Adicionar group_id à tabela incomes se não existir
+    if (!incomesColumns.find(col => col.name === 'group_id')) {
+      await db.run('ALTER TABLE incomes ADD COLUMN group_id TEXT');
+      console.log('✅ Coluna group_id adicionada à tabela incomes');
+      
+      // Migrar dados existentes de incomes
+      await migrateExistingIncomeGroups();
+    }
+  } catch (error) {
+    console.error('❌ Erro ao adicionar colunas group_id:', error);
+  }
+};
+
+const migrateExistingExpenseGroups = async () => {
+  try {
+    // Buscar todas as despesas que podem ter grupos (fixo ou parcelado)
+    const expenses = await db.all(`
+      SELECT id, descricao, repetir, user_id 
+      FROM expenses 
+      WHERE repetir IN ('fixo', 'parcelado') 
+      AND group_id IS NULL
+      ORDER BY descricao, user_id, created_at
+    `);
+
+    const groups = {};
+    
+    for (const expense of expenses) {
+      // Extrair descrição base (sem (x/y) para parceladas)
+      const baseDescricao = expense.descricao.replace(/ \(\d+\/\d+\)$/, '');
+      const groupKey = `${baseDescricao}_${expense.repetir}_${expense.user_id}`;
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          group_id: uuidv4(),
+          ids: []
+        };
+      }
+      
+      groups[groupKey].ids.push(expense.id);
+    }
+    
+    // Atualizar registros com os group_ids
+    for (const group of Object.values(groups)) {
+      if (group.ids.length > 0) {
+        const placeholders = group.ids.map(() => '?').join(',');
+        await db.run(
+          `UPDATE expenses SET group_id = ? WHERE id IN (${placeholders})`,
+          [group.group_id, ...group.ids]
+        );
+      }
+    }
+    
+    console.log(`✅ Migração de group_id em expenses concluída: ${Object.keys(groups).length} grupos processados`);
+  } catch (error) {
+    console.error('❌ Erro ao migrar group_id de expenses:', error);
+  }
+};
+
+const migrateExistingIncomeGroups = async () => {
+  try {
+    // Buscar todas as receitas que podem ter grupos (fixo ou parcelado)
+    const incomes = await db.all(`
+      SELECT id, descricao, repetir, user_id 
+      FROM incomes 
+      WHERE repetir IN ('fixo', 'parcelado') 
+      AND group_id IS NULL
+      ORDER BY descricao, user_id, created_at
+    `);
+
+    const groups = {};
+    
+    for (const income of incomes) {
+      // Extrair descrição base (sem (x/y) para parceladas)
+      const baseDescricao = income.descricao.replace(/ \(\d+\/\d+\)$/, '');
+      const groupKey = `${baseDescricao}_${income.repetir}_${income.user_id}`;
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          group_id: uuidv4(),
+          ids: []
+        };
+      }
+      
+      groups[groupKey].ids.push(income.id);
+    }
+    
+    // Atualizar registros com os group_ids
+    for (const group of Object.values(groups)) {
+      if (group.ids.length > 0) {
+        const placeholders = group.ids.map(() => '?').join(',');
+        await db.run(
+          `UPDATE incomes SET group_id = ? WHERE id IN (${placeholders})`,
+          [group.group_id, ...group.ids]
+        );
+      }
+    }
+    
+    console.log(`✅ Migração de group_id em incomes concluída: ${Object.keys(groups).length} grupos processados`);
+  } catch (error) {
+    console.error('❌ Erro ao migrar group_id de incomes:', error);
+  }
+};
 
 const addUserIdColumns = async () => {
   try {
@@ -114,6 +233,9 @@ const initDatabase = async (shouldConnect = true) => {
 
     // Adicionar user_id às tabelas existentes se não existir
     await addUserIdColumns();
+    
+    // Adicionar group_id às tabelas existentes se não existir
+    await addGroupIdColumns();
 
     console.log('✅ Banco de dados inicializado com sucesso!');
     

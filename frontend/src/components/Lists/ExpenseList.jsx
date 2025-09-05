@@ -5,6 +5,8 @@ import { Card, CardContent, CardGrid } from '../UI/Card';
 import { Button } from '../UI/Button';
 import { Flex } from '../Layout/Container';
 import { PrivateValue } from '../UI/PrivateValue';
+import { GroupItemsModal } from '../UI/GroupItemsModal';
+import { expenseService } from '../../services/api';
 
 const ListContainer = styled.div`
   width: 100%;
@@ -192,6 +194,17 @@ const Description = styled.h4`
   margin-bottom: ${props => props.theme.spacing.sm};
 `;
 
+const ClickableDescription = styled.span`
+  cursor: pointer;
+  transition: ${props => props.theme.transitions.fast};
+  color: ${props => props.clickable ? props.theme.colors.primary : props.theme.colors.text};
+  
+  &:hover {
+    color: ${props => props.clickable ? props.theme.colors.primaryHover : props.theme.colors.text};
+    text-decoration: ${props => props.clickable ? 'underline' : 'none'};
+  }
+`;
+
 const Value = styled.span`
   font-size: 1.25rem;
   font-weight: 700;
@@ -212,6 +225,10 @@ export const ExpenseList = ({
   isLoading 
 }) => {
   const [expandedCards, setExpandedCards] = useState({});
+  const [groupModal, setGroupModal] = useState({ 
+    isOpen: false, 
+    groupData: null 
+  });
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -240,6 +257,42 @@ export const ExpenseList = ({
       ...prev,
       [cardId]: !prev[cardId]
     }));
+  };
+
+  const isGroupClickable = (expense) => {
+    return expense.repetir === 'fixo' || expense.repetir === 'parcelado';
+  };
+
+  const handleDescriptionClick = (expense) => {
+    if (isGroupClickable(expense)) {
+      setGroupModal({
+        isOpen: true,
+        groupData: expense
+      });
+    }
+  };
+
+  const handleCloseGroupModal = () => {
+    setGroupModal({
+      isOpen: false,
+      groupData: null
+    });
+  };
+
+  const handleFetchGroup = async (descricao, repetir, groupId) => {
+    try {
+      // Preferir group_id se disponível
+      if (groupId) {
+        const response = await expenseService.getGroupById(groupId);
+        return response.data;
+      }
+      // Fallback para método legado
+      const response = await expenseService.getGroup(descricao, repetir);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar grupo:', error);
+      throw error;
+    }
   };
 
   // Separate expenses: regular (no credit card) and credit card expenses
@@ -304,7 +357,12 @@ export const ExpenseList = ({
               <TableRow key={expense.id}>
                 <TableCell>
                   <div>
-                    <strong>{expense.descricao}</strong>
+                    <ClickableDescription 
+                      clickable={isGroupClickable(expense)}
+                      onClick={() => handleDescriptionClick(expense)}
+                    >
+                      <strong>{expense.descricao}</strong>
+                    </ClickableDescription>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -402,7 +460,12 @@ export const ExpenseList = ({
                     <TableRow key={expense.id} style={{ backgroundColor: '#f9fafb' }}>
                       <TableCell style={{ paddingLeft: '3rem' }}>
                         <div>
-                          <strong>{expense.descricao}</strong>
+                          <ClickableDescription 
+                            clickable={isGroupClickable(expense)}
+                            onClick={() => handleDescriptionClick(expense)}
+                          >
+                            <strong>{expense.descricao}</strong>
+                          </ClickableDescription>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -454,7 +517,14 @@ export const ExpenseList = ({
         {regularExpenses.map((expense) => (
           <MobileCard key={expense.id}>
             <CardContent>
-              <Description>{expense.descricao}</Description>
+              <Description>
+                <ClickableDescription 
+                  clickable={isGroupClickable(expense)}
+                  onClick={() => handleDescriptionClick(expense)}
+                >
+                  {expense.descricao}
+                </ClickableDescription>
+              </Description>
               
               <CardRow>
                 <CardLabel>
@@ -552,7 +622,14 @@ export const ExpenseList = ({
                   {creditCard.expenses.map((expense) => (
                     <MobileCard key={expense.id} style={{ margin: '0', borderRadius: '0' }}>
                       <CardContent>
-                        <Description>{expense.descricao}</Description>
+                        <Description>
+                          <ClickableDescription 
+                            clickable={isGroupClickable(expense)}
+                            onClick={() => handleDescriptionClick(expense)}
+                          >
+                            {expense.descricao}
+                          </ClickableDescription>
+                        </Description>
                         
                         <CardRow>
                           <CardLabel>
@@ -628,6 +705,14 @@ export const ExpenseList = ({
           ))}
         </MobileCardGrid>
       )}
+
+      <GroupItemsModal
+        isOpen={groupModal.isOpen}
+        onClose={handleCloseGroupModal}
+        groupData={groupModal.groupData}
+        type="expense"
+        onFetchGroup={handleFetchGroup}
+      />
     </ListContainer>
   );
 };

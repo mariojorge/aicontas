@@ -1,5 +1,6 @@
 const db = require('../database/connection');
 const yup = require('yup');
+const { v4: uuidv4 } = require('uuid');
 
 const incomeSchema = yup.object().shape({
   descricao: yup.string().required('Descrição é obrigatória').min(3, 'Descrição deve ter pelo menos 3 caracteres'),
@@ -9,7 +10,8 @@ const incomeSchema = yup.object().shape({
   data_recebimento: yup.string().required('Data de recebimento é obrigatória'),
   repetir: yup.string().oneOf(['nao', 'parcelado', 'fixo']).optional(),
   parcelas: yup.number().integer().positive().optional(),
-  parcela_atual: yup.number().integer().positive().optional()
+  parcela_atual: yup.number().integer().positive().optional(),
+  group_id: yup.string().optional()
 });
 
 class Income {
@@ -25,17 +27,22 @@ class Income {
       repetir = 'nao',
       parcelas = 1,
       parcela_atual = 1,
+      group_id = null,
       user_id
     } = data;
 
     const result = await db.run(`
       INSERT INTO incomes (
         descricao, valor, situacao, categoria, 
-        data_recebimento, repetir, parcelas, parcela_atual, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [descricao, valor, situacao, categoria, data_recebimento, repetir, parcelas, parcela_atual, user_id]);
+        data_recebimento, repetir, parcelas, parcela_atual, group_id, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [descricao, valor, situacao, categoria, data_recebimento, repetir, parcelas, parcela_atual, group_id, user_id]);
 
     return { id: result.id, ...data };
+  }
+  
+  static generateGroupId() {
+    return uuidv4();
   }
 
   static async findAll(filters = {}) {
@@ -97,15 +104,37 @@ class Income {
     return { message: 'Receita excluída com sucesso' };
   }
 
+  static async findByGroupId(groupId, userId) {
+    if (!groupId) return [];
+    
+    return await db.all(`
+      SELECT * FROM incomes 
+      WHERE group_id = ? AND user_id = ?
+      ORDER BY parcela_atual, data_recebimento
+    `, [groupId, userId]);
+  }
+  
+  // Método legado mantido para compatibilidade
   static async findByGroup(descricao, repetir, userId) {
     if (repetir === 'nao') return [];
     
     const baseDescricao = descricao.replace(/ \(\d+\/\d+\)$/, '');
-    return await db.all(`
-      SELECT * FROM incomes 
-      WHERE descricao LIKE ? AND repetir = ? AND user_id = ?
-      ORDER BY parcela_atual
-    `, [`${baseDescricao}%`, repetir, userId]);
+    
+    // Para fixas, buscar pela descrição exata
+    // Para parceladas, buscar pela descrição base com padrão (x/y)
+    if (repetir === 'fixo') {
+      return await db.all(`
+        SELECT * FROM incomes 
+        WHERE descricao = ? AND repetir = ? AND user_id = ?
+        ORDER BY data_recebimento
+      `, [baseDescricao, repetir, userId]);
+    } else {
+      return await db.all(`
+        SELECT * FROM incomes 
+        WHERE descricao LIKE ? AND repetir = ? AND user_id = ?
+        ORDER BY parcela_atual
+      `, [`${baseDescricao}%`, repetir, userId]);
+    }
   }
 
   static async updateGroup(baseDescricao, repetir, data, updateAllOpen = false, userId) {
