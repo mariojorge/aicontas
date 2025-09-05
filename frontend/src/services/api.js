@@ -96,6 +96,13 @@ export const expenseService = {
       params: { group_id: groupId } 
     });
     return response.data;
+  },
+
+  async toggleCreditCardPayments(cardId, mes, ano) {
+    const response = await api.patch(`/expenses/credit-card/${cardId}/toggle-payment`, {}, {
+      params: { mes, ano }
+    });
+    return response.data;
   }
 };
 

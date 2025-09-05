@@ -288,6 +288,49 @@ class Expense {
     
     return result;
   }
+
+  static async toggleCreditCardPaymentsByMonth(cardId, mes, ano, userId) {
+    if (!cardId || !mes || !ano || !userId) {
+      throw new Error('Parâmetros obrigatórios não fornecidos');
+    }
+
+    // Buscar todas as despesas do cartão no mês/ano específico
+    const expenses = await db.all(`
+      SELECT * FROM expenses 
+      WHERE cartao_credito_id = ? 
+        AND strftime('%m', data_pagamento) = ? 
+        AND strftime('%Y', data_pagamento) = ? 
+        AND user_id = ?
+    `, [cardId, mes.padStart(2, '0'), ano, userId]);
+
+    if (expenses.length === 0) {
+      return {
+        updated_count: 0,
+        new_status: null,
+        message: 'Nenhuma despesa encontrada para este cartão no período'
+      };
+    }
+
+    // Verificar se todas estão pagas ou se há alguma em aberto
+    const allPaid = expenses.every(expense => expense.situacao === 'pago');
+    const newStatus = allPaid ? 'aberto' : 'pago';
+
+    // Atualizar todas as despesas do cartão no período
+    const result = await db.run(`
+      UPDATE expenses 
+      SET situacao = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE cartao_credito_id = ? 
+        AND strftime('%m', data_pagamento) = ? 
+        AND strftime('%Y', data_pagamento) = ? 
+        AND user_id = ?
+    `, [newStatus, cardId, mes.padStart(2, '0'), ano, userId]);
+
+    return {
+      updated_count: result.changes,
+      new_status: newStatus,
+      expenses_updated: expenses.map(e => e.id)
+    };
+  }
 }
 
 module.exports = Expense;

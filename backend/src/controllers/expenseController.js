@@ -242,6 +242,35 @@ class ExpenseController {
       res.status(500).json({ success: false, error: error.message });
     }
   }
+
+  static async toggleCreditCardPayments(req, res) {
+    try {
+      const { cardId } = req.params;
+      const { mes, ano } = req.query;
+
+      if (!mes || !ano) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Parâmetros mes e ano são obrigatórios' 
+        });
+      }
+
+      console.log(`📝 Alternando pagamentos do cartão ${cardId} para ${mes}/${ano}`);
+      
+      const result = await Expense.toggleCreditCardPaymentsByMonth(cardId, mes, ano, req.user.id);
+      
+      console.log(`✅ ${result.updated_count} despesas do cartão atualizadas para: ${result.new_status}`);
+      
+      res.json({ 
+        success: true, 
+        data: result,
+        message: `${result.updated_count} despesas ${result.new_status === 'pago' ? 'pagas' : 'reabertas'} com sucesso`
+      });
+    } catch (error) {
+      console.error('❌ Erro ao alternar pagamentos do cartão:', error.message);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
 }
 
 module.exports = ExpenseController;

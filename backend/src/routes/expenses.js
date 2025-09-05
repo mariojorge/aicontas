@@ -25,6 +25,7 @@ router.get('/totals/:mes/:ano', ExpenseController.getTotalByMonth);
 router.get('/categories/:mes/:ano', ExpenseController.getByCategory);
 router.get('/grouped', ExpenseController.getAllGrouped);
 router.get('/group', ExpenseController.getGroupByDescription);
+router.patch('/credit-card/:cardId/toggle-payment', ExpenseController.toggleCreditCardPayments);
 
 // Rotas CRUD
 router.post('/', ExpenseController.create);

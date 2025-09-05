@@ -195,6 +195,9 @@ export const Expenses = () => {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onToggleStatus={handleToggleStatus}
+            onRefresh={fetchExpenses}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
             isLoading={isLoading}
           />
         )}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { Edit2, Trash2, Calendar, DollarSign, Tag, CheckCircle, Circle, CreditCard, ChevronDown, ChevronRight } from 'lucide-react';
+import { Edit2, Trash2, Calendar, DollarSign, Tag, CheckCircle, Circle, CreditCard, ChevronDown, ChevronRight, CreditCard as CreditCardPayIcon } from 'lucide-react';
 import { Card, CardContent, CardGrid } from '../UI/Card';
 import { Button } from '../UI/Button';
 import { Flex } from '../Layout/Container';
@@ -222,6 +222,9 @@ export const ExpenseList = ({
   onEdit, 
   onDelete,
   onToggleStatus,
+  onRefresh,
+  selectedMonth,
+  selectedYear,
   isLoading 
 }) => {
   const [expandedCards, setExpandedCards] = useState({});
@@ -295,6 +298,35 @@ export const ExpenseList = ({
     }
   };
 
+  const handleToggleCreditCardPayments = async (cardId) => {
+    try {
+      const mes = (selectedMonth + 1).toString().padStart(2, '0');
+      const ano = selectedYear.toString();
+      
+      await expenseService.toggleCreditCardPayments(cardId, mes, ano);
+      
+      // Atualizar a lista de despesas
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('Erro ao alternar pagamentos do cartão:', error);
+      alert('Erro ao alterar situação do cartão. Tente novamente.');
+    }
+  };
+
+  const getCardPaymentStatus = (creditCard) => {
+    const allPaid = creditCard.expenses.every(expense => expense.situacao === 'pago');
+    const hasUnpaid = creditCard.expenses.some(expense => expense.situacao === 'aberto');
+    
+    if (allPaid) {
+      return { label: 'Reabrir Todas', variant: 'secondary' };
+    } else if (hasUnpaid) {
+      return { label: 'Pagar Todas', variant: 'success' };
+    }
+    return { label: 'Pagar Todas', variant: 'success' };
+  };
+
   // Separate expenses: regular (no credit card) and credit card expenses
   const regularExpenses = expenses.filter(expense => !expense.cartao_credito_id);
   const creditCardExpenses = expenses.filter(expense => expense.cartao_credito_id);
@@ -338,8 +370,113 @@ export const ExpenseList = ({
 
   return (
     <ListContainer>
+      {/* Tabela de Cartões de Crédito */}
+      {Object.keys(creditCardGroups).length > 0 && (
+        <TableWrapper>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHeaderCell>Cartão de Crédito</TableHeaderCell>
+                <TableHeaderCell>Valor Total</TableHeaderCell>
+                <TableHeaderCell>Despesas</TableHeaderCell>
+                <TableHeaderCell>Ações</TableHeaderCell>
+              </TableRow>
+            </TableHeader>
+            <tbody>
+              {Object.values(creditCardGroups).map((creditCard) => (
+                <React.Fragment key={`card-${creditCard.id}`}>
+                  <TableRow style={{ backgroundColor: '#f8fafc' }}>
+                    <TableCell>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <CreditCard size={20} style={{ color: '#6366f1' }} />
+                        <div>
+                          <strong>{creditCard.nome}</strong>
+                          <div style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                            {creditCard.bandeira}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <PrivateValue>
+                        <Value style={{ color: '#1f2937' }}>{formatCurrency(creditCard.total)}</Value>
+                      </PrivateValue>
+                    </TableCell>
+                    <TableCell>
+                      <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                        {creditCard.count} despesa{creditCard.count !== 1 ? 's' : ''}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <ActionButtons>
+                        <ActionButton
+                          onClick={() => handleToggleCreditCardPayments(creditCard.id)}
+                          title={getCardPaymentStatus(creditCard).label}
+                          className={getCardPaymentStatus(creditCard).variant === 'success' ? 'success' : ''}
+                        >
+                          {getCardPaymentStatus(creditCard).variant === 'success' ? <CheckCircle size={16} /> : <Circle size={16} />}
+                        </ActionButton>
+                        <ActionButton
+                          onClick={() => toggleCardExpansion(creditCard.id)}
+                          title="Ver detalhes"
+                        >
+                          {expandedCards[creditCard.id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        </ActionButton>
+                      </ActionButtons>
+                    </TableCell>
+                  </TableRow>
+                  {expandedCards[creditCard.id] && creditCard.expenses.map((expense) => (
+                    <TableRow key={expense.id} style={{ backgroundColor: '#f9fafb' }}>
+                      <TableCell style={{ paddingLeft: '3rem' }}>
+                        <div>
+                          <ClickableDescription
+                            clickable={isGroupClickable(expense)}
+                            onClick={() => handleDescriptionClick(expense)}
+                          >
+                            <strong>{expense.descricao}</strong>
+                          </ClickableDescription>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <PrivateValue>
+                          <Value>{formatCurrency(expense.valor)}</Value>
+                        </PrivateValue>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={expense.situacao}>
+                          {expense.situacao === 'pago' ? 'Pago' : 'Aberto'}
+                        </StatusBadge>
+                        <div style={{ fontSize: '0.875rem', color: '#6B7280', marginTop: '0.25rem' }}>
+                          {expense.categoria} • {formatDate(expense.data_pagamento)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <ActionButtons>
+                          <ActionButton
+                            onClick={() => onEdit && onEdit(expense)}
+                            title="Editar"
+                          >
+                            <Edit2 size={16} />
+                          </ActionButton>
+                          <ActionButton
+                            onClick={() => onDelete && onDelete(expense.id)}
+                            title="Excluir"
+                          >
+                            <Trash2 size={16} />
+                          </ActionButton>
+                        </ActionButtons>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrapper>
+      )}
+
       {/* Tabela para Desktop */}
-      <TableWrapper>
+      <TableWrapper style={{ marginTop: '2rem' }}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -410,110 +547,124 @@ export const ExpenseList = ({
         </Table>
       </TableWrapper>
 
-      {/* Tabela de Cartões de Crédito */}
+      {/* Cards para Mobile - Cartões de Crédito */}
       {Object.keys(creditCardGroups).length > 0 && (
-        <TableWrapper style={{ marginTop: '2rem' }}>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHeaderCell>Cartão de Crédito</TableHeaderCell>
-                <TableHeaderCell>Valor Total</TableHeaderCell>
-                <TableHeaderCell>Despesas</TableHeaderCell>
-                <TableHeaderCell>Ações</TableHeaderCell>
-              </TableRow>
-            </TableHeader>
-            <tbody>
-              {Object.values(creditCardGroups).map((creditCard) => (
-                <React.Fragment key={`card-${creditCard.id}`}>
-                  <TableRow style={{ backgroundColor: '#f8fafc' }}>
-                    <TableCell>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <CreditCard size={20} style={{ color: '#6366f1' }} />
-                        <div>
-                          <strong>{creditCard.nome}</strong>
-                          <div style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                            {creditCard.bandeira}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
+        <MobileCardGrid>
+          {Object.values(creditCardGroups).map((creditCard) => (
+            <div key={`mobile-card-${creditCard.id}`}>
+              <CreditCardGroup>
+                <CreditCardHeader>
+                  <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                    <CreditCardInfo onClick={() => toggleCardExpansion(creditCard.id)} style={{ cursor: 'pointer', flex: 1 }}>
+                      <CreditCard size={24} style={{ color: '#6366f1' }} />
+                      <CreditCardDetails>
+                        <CreditCardName>{creditCard.nome}</CreditCardName>
+                        <CreditCardBrand>{creditCard.bandeira}</CreditCardBrand>
+                      </CreditCardDetails>
+                    </CreditCardInfo>
+                    <CreditCardTotal>
                       <PrivateValue>
-                        <Value style={{ color: '#1f2937' }}>{formatCurrency(creditCard.total)}</Value>
+                        <CreditCardValue>{formatCurrency(creditCard.total)}</CreditCardValue>
                       </PrivateValue>
-                    </TableCell>
-                    <TableCell>
-                      <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                        {creditCard.count} despesa{creditCard.count !== 1 ? 's' : ''}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <ActionButton
-                        onClick={() => toggleCardExpansion(creditCard.id)}
-                        title="Ver detalhes"
+                      <CreditCardCount>{creditCard.count} despesa{creditCard.count !== 1 ? 's' : ''}</CreditCardCount>
+                    </CreditCardTotal>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Button
+                        size="small"
+                        variant={getCardPaymentStatus(creditCard).variant === 'success' ? 'success' : 'secondary'}
+                        onClick={() => handleToggleCreditCardPayments(creditCard.id)}
+                        title={getCardPaymentStatus(creditCard).label}
                       >
-                        {expandedCards[creditCard.id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                      </ActionButton>
-                    </TableCell>
-                  </TableRow>
-                  {expandedCards[creditCard.id] && creditCard.expenses.map((expense) => (
-                    <TableRow key={expense.id} style={{ backgroundColor: '#f9fafb' }}>
-                      <TableCell style={{ paddingLeft: '3rem' }}>
-                        <div>
-                          <ClickableDescription 
+                        {getCardPaymentStatus(creditCard).variant === 'success' ? <CheckCircle size={16} /> : <Circle size={16} />}
+                      </Button>
+                      <div onClick={() => toggleCardExpansion(creditCard.id)} style={{ cursor: 'pointer' }}>
+                        {expandedCards[creditCard.id] ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                      </div>
+                    </div>
+                  </div>
+                </CreditCardHeader>
+                <CreditCardExpenses expanded={expandedCards[creditCard.id]}>
+                  {creditCard.expenses.map((expense) => (
+                    <MobileCard key={expense.id} style={{ margin: '0', borderRadius: '0' }}>
+                      <CardContent>
+                        <Description>
+                          <ClickableDescription
                             clickable={isGroupClickable(expense)}
                             onClick={() => handleDescriptionClick(expense)}
                           >
-                            <strong>{expense.descricao}</strong>
+                            {expense.descricao}
                           </ClickableDescription>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <PrivateValue>
-                          <Value>{formatCurrency(expense.valor)}</Value>
-                        </PrivateValue>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={expense.situacao}>
-                          {expense.situacao === 'pago' ? 'Pago' : 'Aberto'}
-                        </StatusBadge>
-                        <div style={{ fontSize: '0.875rem', color: '#6B7280', marginTop: '0.25rem' }}>
-                          {expense.categoria} • {formatDate(expense.data_pagamento)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <ActionButtons>
-                          <ActionButton
-                            onClick={() => onToggleStatus && onToggleStatus(expense)}
-                            title={expense.situacao === 'pago' ? 'Marcar como aberto' : 'Marcar como pago'}
-                          >
-                            {expense.situacao === 'pago' ? <Circle size={16} /> : <CheckCircle size={16} />}
-                          </ActionButton>
-                          <ActionButton
+                        </Description>
+
+                        <CardRow>
+                          <CardLabel>
+                            <DollarSign size={16} />
+                            Valor
+                          </CardLabel>
+                          <PrivateValue>
+                            <Value>{formatCurrency(expense.valor)}</Value>
+                          </PrivateValue>
+                        </CardRow>
+
+                        <CardRow>
+                          <CardLabel>Situação</CardLabel>
+                          <StatusBadge status={expense.situacao}>
+                            {expense.situacao === 'pago' ? 'Pago' : 'Aberto'}
+                          </StatusBadge>
+                        </CardRow>
+
+                        <CardRow>
+                          <CardLabel>
+                            <Tag size={16} />
+                            Categoria
+                          </CardLabel>
+                          <CardValue>
+                            {expense.categoria}
+                          </CardValue>
+                        </CardRow>
+
+                        <CardRow>
+                          <CardLabel>
+                            <Calendar size={16} />
+                            Data
+                          </CardLabel>
+                          <CardValue>{formatDate(expense.data_pagamento)}</CardValue>
+                        </CardRow>
+
+                        <CardRow>
+                          <CardLabel>Recorrência</CardLabel>
+                          <CardValue>{formatRecorrencia(expense)}</CardValue>
+                        </CardRow>
+
+                        <Flex justify="flex-end" style={{ marginTop: '1rem' }}>
+                          <Button
+                            size="small"
+                            variant="secondary"
                             onClick={() => onEdit && onEdit(expense)}
-                            title="Editar"
+                            style={{ marginRight: '0.5rem' }}
                           >
                             <Edit2 size={16} />
-                          </ActionButton>
-                          <ActionButton
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="error"
                             onClick={() => onDelete && onDelete(expense.id)}
-                            title="Excluir"
                           >
                             <Trash2 size={16} />
-                          </ActionButton>
-                        </ActionButtons>
-                      </TableCell>
-                    </TableRow>
+                          </Button>
+                        </Flex>
+                      </CardContent>
+                    </MobileCard>
                   ))}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </Table>
-        </TableWrapper>
+                </CreditCardExpenses>
+              </CreditCardGroup>
+            </div>
+          ))}
+        </MobileCardGrid>
       )}
 
       {/* Cards para Mobile - Despesas Regulares */}
-      <MobileCardGrid>
+      <MobileCardGrid style={{ marginTop: '2rem' }}>
         {regularExpenses.map((expense) => (
           <MobileCard key={expense.id}>
             <CardContent>
@@ -595,116 +746,6 @@ export const ExpenseList = ({
           </MobileCard>
         ))}
       </MobileCardGrid>
-
-      {/* Cards para Mobile - Cartões de Crédito */}
-      {Object.keys(creditCardGroups).length > 0 && (
-        <MobileCardGrid style={{ marginTop: '2rem' }}>
-          {Object.values(creditCardGroups).map((creditCard) => (
-            <div key={`mobile-card-${creditCard.id}`}>
-              <CreditCardGroup>
-                <CreditCardHeader onClick={() => toggleCardExpansion(creditCard.id)}>
-                  <CreditCardInfo>
-                    <CreditCard size={24} style={{ color: '#6366f1' }} />
-                    <CreditCardDetails>
-                      <CreditCardName>{creditCard.nome}</CreditCardName>
-                      <CreditCardBrand>{creditCard.bandeira}</CreditCardBrand>
-                    </CreditCardDetails>
-                  </CreditCardInfo>
-                  <CreditCardTotal>
-                    <PrivateValue>
-                      <CreditCardValue>{formatCurrency(creditCard.total)}</CreditCardValue>
-                    </PrivateValue>
-                    <CreditCardCount>{creditCard.count} despesa{creditCard.count !== 1 ? 's' : ''}</CreditCardCount>
-                  </CreditCardTotal>
-                  {expandedCards[creditCard.id] ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-                </CreditCardHeader>
-                <CreditCardExpenses expanded={expandedCards[creditCard.id]}>
-                  {creditCard.expenses.map((expense) => (
-                    <MobileCard key={expense.id} style={{ margin: '0', borderRadius: '0' }}>
-                      <CardContent>
-                        <Description>
-                          <ClickableDescription 
-                            clickable={isGroupClickable(expense)}
-                            onClick={() => handleDescriptionClick(expense)}
-                          >
-                            {expense.descricao}
-                          </ClickableDescription>
-                        </Description>
-                        
-                        <CardRow>
-                          <CardLabel>
-                            <DollarSign size={16} />
-                            Valor
-                          </CardLabel>
-                          <PrivateValue>
-                            <Value>{formatCurrency(expense.valor)}</Value>
-                          </PrivateValue>
-                        </CardRow>
-                        
-                        <CardRow>
-                          <CardLabel>Situação</CardLabel>
-                          <StatusBadge status={expense.situacao}>
-                            {expense.situacao === 'pago' ? 'Pago' : 'Aberto'}
-                          </StatusBadge>
-                        </CardRow>
-                        
-                        <CardRow>
-                          <CardLabel>
-                            <Tag size={16} />
-                            Categoria
-                          </CardLabel>
-                          <CardValue>
-                            {expense.categoria}
-                          </CardValue>
-                        </CardRow>
-                        
-                        <CardRow>
-                          <CardLabel>
-                            <Calendar size={16} />
-                            Data
-                          </CardLabel>
-                          <CardValue>{formatDate(expense.data_pagamento)}</CardValue>
-                        </CardRow>
-                        
-                        <CardRow>
-                          <CardLabel>Recorrência</CardLabel>
-                          <CardValue>{formatRecorrencia(expense)}</CardValue>
-                        </CardRow>
-                        
-                        <Flex justify="flex-end" style={{ marginTop: '1rem' }}>
-                          <Button
-                            size="small"
-                            variant={expense.situacao === 'pago' ? 'secondary' : 'success'}
-                            onClick={() => onToggleStatus && onToggleStatus(expense)}
-                            style={{ marginRight: '0.5rem' }}
-                          >
-                            {expense.situacao === 'pago' ? <Circle size={16} /> : <CheckCircle size={16} />}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="secondary"
-                            onClick={() => onEdit && onEdit(expense)}
-                            style={{ marginRight: '0.5rem' }}
-                          >
-                            <Edit2 size={16} />
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="error"
-                            onClick={() => onDelete && onDelete(expense.id)}
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </Flex>
-                      </CardContent>
-                    </MobileCard>
-                  ))}
-                </CreditCardExpenses>
-              </CreditCardGroup>
-            </div>
-          ))}
-        </MobileCardGrid>
-      )}
 
       <GroupItemsModal
         isOpen={groupModal.isOpen}
