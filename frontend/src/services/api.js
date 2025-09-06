@@ -158,6 +158,65 @@ export const incomeService = {
   }
 };
 
+export const investmentAssetService = {
+  async getAll(filters = {}) {
+    const response = await api.get('/investment-assets', { params: filters });
+    return response.data;
+  },
+  
+  async getById(id) {
+    const response = await api.get(`/investment-assets/${id}`);
+    return response.data;
+  },
+  
+  async create(data) {
+    const response = await api.post('/investment-assets', data);
+    return response.data;
+  },
+  
+  async update(id, data) {
+    const response = await api.put(`/investment-assets/${id}`, data);
+    return response.data;
+  },
+  
+  async delete(id) {
+    const response = await api.delete(`/investment-assets/${id}`);
+    return response.data;
+  },
+  
+  async toggleActive(id) {
+    const response = await api.patch(`/investment-assets/${id}/toggle-active`);
+    return response.data;
+  }
+};
+
+export const investmentTransactionService = {
+  async getAll(filters = {}) {
+    const response = await api.get('/investment-transactions', { params: filters });
+    return response.data;
+  },
+  
+  async getById(id) {
+    const response = await api.get(`/investment-transactions/${id}`);
+    return response.data;
+  },
+  
+  async create(data) {
+    const response = await api.post('/investment-transactions', data);
+    return response.data;
+  },
+  
+  async update(id, data) {
+    const response = await api.put(`/investment-transactions/${id}`, data);
+    return response.data;
+  },
+  
+  async delete(id) {
+    const response = await api.delete(`/investment-transactions/${id}`);
+    return response.data;
+  }
+};
+
 export const categoryService = {
   async getAll(filters = {}) {
     const response = await api.get('/categories', { params: filters });

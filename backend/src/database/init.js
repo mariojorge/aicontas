@@ -231,6 +231,40 @@ const initDatabase = async (shouldConnect = true) => {
       )
     `);
 
+    // Tabela de ativos de investimento
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS investment_assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        tipo TEXT CHECK(tipo IN ('acao', 'fii', 'fundo', 'renda_fixa', 'etf')) NOT NULL,
+        setor TEXT,
+        descricao TEXT,
+        ativo BOOLEAN DEFAULT 1,
+        user_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+
+    // Tabela de transações de investimento
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS investment_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        asset_id INTEGER NOT NULL,
+        data DATE NOT NULL,
+        tipo TEXT CHECK(tipo IN ('compra', 'venda')) NOT NULL,
+        quantidade DECIMAL(15,6) NOT NULL,
+        valor_unitario DECIMAL(15,2) NOT NULL,
+        valor_total DECIMAL(15,2) NOT NULL,
+        user_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (asset_id) REFERENCES investment_assets(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+
     // Adicionar user_id às tabelas existentes se não existir
     await addUserIdColumns();
     
@@ -258,6 +292,8 @@ const insertSampleData = async () => {
     const incomeCount = await db.get('SELECT COUNT(*) as count FROM incomes');
     const categoryCount = await db.get('SELECT COUNT(*) as count FROM categories');
     const creditCardCount = await db.get('SELECT COUNT(*) as count FROM credit_cards');
+    const investmentAssetCount = await db.get('SELECT COUNT(*) as count FROM investment_assets');
+    const investmentTransactionCount = await db.get('SELECT COUNT(*) as count FROM investment_transactions');
     const userCount = await db.get('SELECT COUNT(*) as count FROM users');
 
     // Inserir usuário padrão primeiro
@@ -324,6 +360,47 @@ const insertSampleData = async () => {
           ('Cartão Internacional', 'Mastercard', 10, 1, ?),
           ('Cartão Reserva', 'Elo', 15, 0, ?)
       `, [defaultUserId, defaultUserId, defaultUserId]);
+    }
+
+    if (investmentAssetCount.count === 0) {
+      await db.run(`
+        INSERT INTO investment_assets (nome, tipo, setor, descricao, ativo, user_id)
+        VALUES 
+          ('PETR4', 'acao', 'Petróleo e Gás', 'Petrobras PN', 1, ?),
+          ('ITUB4', 'acao', 'Bancos', 'Itaú Unibanco PN', 1, ?),
+          ('VISC11', 'fii', 'Shopping Centers', 'Vinci Shopping Centers FII', 1, ?),
+          ('HGLG11', 'fii', 'Logística', 'CSHG Logística FII', 1, ?),
+          ('Tesouro IPCA+ 2029', 'renda_fixa', 'Tesouro Nacional', 'Tesouro IPCA+ com Juros Semestrais 2029', 1, ?),
+          ('CDB Banco XYZ', 'renda_fixa', 'CDB', 'CDB pós-fixado CDI+2%', 1, ?),
+          ('Fundo Multimercado ABC', 'fundo', 'Multimercado', 'Fundo de investimento multimercado', 1, ?),
+          ('Fundo Imobiliário DEF', 'fundo', 'Imobiliário', 'Fundo de investimento imobiliário', 0, ?),
+          ('IVVB11', 'etf', 'Índice S&P 500', 'ETF iShares Core S&P 500', 1, ?)
+      `, [defaultUserId, defaultUserId, defaultUserId, defaultUserId, defaultUserId, defaultUserId, defaultUserId, defaultUserId, defaultUserId]);
+    }
+
+    // Inserir transações de exemplo
+    if (investmentTransactionCount.count === 0) {
+      // Buscar IDs dos ativos para referenciar nas transações
+      const petr4Asset = await db.get('SELECT id FROM investment_assets WHERE nome = ? AND user_id = ?', ['PETR4', defaultUserId]);
+      const ivvb11Asset = await db.get('SELECT id FROM investment_assets WHERE nome = ? AND user_id = ?', ['IVVB11', defaultUserId]);
+      
+      if (petr4Asset && ivvb11Asset) {
+        await db.run(`
+          INSERT INTO investment_transactions (asset_id, data, tipo, quantidade, valor_unitario, valor_total, user_id)
+          VALUES 
+            (?, '2024-01-15', 'compra', 100, 32.50, 3250.00, ?),
+            (?, '2024-02-10', 'compra', 50, 34.20, 1710.00, ?),
+            (?, '2024-03-05', 'venda', 30, 36.00, 1080.00, ?),
+            (?, '2024-01-20', 'compra', 10, 128.50, 1285.00, ?),
+            (?, '2024-02-15', 'compra', 5, 132.00, 660.00, ?)
+        `, [
+          petr4Asset.id, defaultUserId,
+          petr4Asset.id, defaultUserId,
+          petr4Asset.id, defaultUserId,
+          ivvb11Asset.id, defaultUserId,
+          ivvb11Asset.id, defaultUserId
+        ]);
+      }
     }
 
     console.log('📊 Dados de exemplo inseridos!');

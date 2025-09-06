@@ -9,6 +9,8 @@ const expenseRoutes = require('./routes/expenses');
 const incomeRoutes = require('./routes/incomes');
 const categoryRoutes = require('./routes/categories');
 const creditCardRoutes = require('./routes/creditCards');
+const investmentAssetRoutes = require('./routes/investmentAssets');
+const investmentTransactionRoutes = require('./routes/investmentTransactions');
 const authRoutes = require('./routes/auth');
 
 const app = express();
@@ -31,6 +33,8 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/incomes', incomeRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/credit-cards', creditCardRoutes);
+app.use('/api/investment-assets', investmentAssetRoutes);
+app.use('/api/investment-transactions', investmentTransactionRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Finance Control API is running' });

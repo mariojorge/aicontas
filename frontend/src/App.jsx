@@ -11,6 +11,8 @@ import { Expenses } from './pages/Expenses.jsx';
 import { Incomes } from './pages/Incomes.jsx';
 import { Categories } from './pages/Categories.jsx';
 import { CreditCards } from './pages/CreditCards.jsx';
+import { InvestmentAssets } from './pages/InvestmentAssets.jsx';
+import { InvestmentTransactions } from './pages/InvestmentTransactions.jsx';
 
 function App() {
   return (
@@ -29,6 +31,8 @@ function App() {
                   <Route path="/receitas" element={<Incomes />} />
                   <Route path="/categorias" element={<Categories />} />
                   <Route path="/cartoes" element={<CreditCards />} />
+                  <Route path="/ativos" element={<InvestmentAssets />} />
+                  <Route path="/transacoes" element={<InvestmentTransactions />} />
                 </Routes>
               </main>
             </div>

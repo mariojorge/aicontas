@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, DollarSign, Eye, EyeOff, LogOut, User, Settings } from 'lucide-react';
+import { Menu, X, DollarSign, Eye, EyeOff, LogOut, User, Settings, TrendingUp } from 'lucide-react';
 import { Container } from './Container';
 import { DropdownMenu } from '../UI/DropdownMenu';
 import { getValueVisibility, toggleValueVisibility } from '../../utils/valueVisibility';
@@ -159,6 +159,7 @@ const LogoutButton = styled.button`
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isConfigDropdownOpen, setIsConfigDropdownOpen] = useState(false);
+  const [isInvestmentDropdownOpen, setIsInvestmentDropdownOpen] = useState(false);
   const [valuesVisible, setValuesVisible] = useState(true);
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -199,12 +200,26 @@ export const Header = () => {
     { path: '/cartoes', label: 'Cartões' }
   ];
 
+  const investmentItems = [
+    { path: '/ativos', label: 'Ativos' },
+    { path: '/transacoes', label: 'Transações' }
+  ];
+
   const handleConfigDropdown = (isOpen) => {
     setIsConfigDropdownOpen(isOpen);
   };
 
   const closeConfigDropdown = () => {
     setIsConfigDropdownOpen(false);
+    closeMenu();
+  };
+
+  const handleInvestmentDropdown = (isOpen) => {
+    setIsInvestmentDropdownOpen(isOpen);
+  };
+
+  const closeInvestmentDropdown = () => {
+    setIsInvestmentDropdownOpen(false);
     closeMenu();
   };
 
@@ -239,6 +254,18 @@ export const Header = () => {
             >
               Despesas
             </NavLink>
+            <DropdownMenu
+              trigger={
+                <>
+                  <TrendingUp size={16} />
+                  Investimento
+                </>
+              }
+              items={investmentItems}
+              isOpen={isInvestmentDropdownOpen}
+              onToggle={handleInvestmentDropdown}
+              onClose={closeInvestmentDropdown}
+            />
             <DropdownMenu
               trigger={
                 <>
