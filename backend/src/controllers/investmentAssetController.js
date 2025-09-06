@@ -44,6 +44,14 @@ const investmentAssetController = {
 
   async create(req, res) {
     try {
+      if (!req.user || !req.user.id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Usuário não identificado',
+          error: 'user_id é obrigatório'
+        });
+      }
+      
       const asset = await InvestmentAsset.create({ ...req.body, user_id: req.user.id });
       
       res.status(201).json({
@@ -52,6 +60,7 @@ const investmentAssetController = {
         message: 'Ativo de investimento criado com sucesso'
       });
     } catch (error) {
+      
       if (error.name === 'ValidationError') {
         return res.status(400).json({
           success: false,

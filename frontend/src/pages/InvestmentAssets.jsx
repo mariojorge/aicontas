@@ -203,6 +203,28 @@ const MobileCardActions = styled.div`
   justify-content: flex-end;
 `;
 
+const TotalRow = styled.tr`
+  background: ${props => props.theme.colors.backgroundTertiary};
+  font-weight: 600;
+  border-top: 2px solid ${props => props.theme.colors.primary};
+  
+  td {
+    padding: ${props => props.theme.spacing.md};
+    font-size: 0.9rem;
+  }
+`;
+
+const TypeHeader = styled.h3`
+  margin: ${props => props.theme.spacing.xl} 0 ${props => props.theme.spacing.md} 0;
+  color: ${props => props.theme.colors.text};
+  font-size: 1.25rem;
+  font-weight: 600;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
 const StatusBadge = styled.span`
   padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
   border-radius: ${props => props.theme.borderRadius.full};
@@ -431,6 +453,9 @@ export const InvestmentAssets = () => {
       fetchPortfolioData();
     } catch (error) {
       console.error('Erro ao salvar ativo:', error);
+      // Adicionar alerta para o usuário ver o erro
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Erro desconhecido ao salvar ativo';
+      alert(`Erro ao salvar ativo: ${errorMessage}`);
     }
   };
 
@@ -518,6 +543,24 @@ export const InvestmentAssets = () => {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals
     }).format(value || 0);
+  };
+
+  const groupAssetsByType = (assets) => {
+    return assets.reduce((groups, asset) => {
+      const type = asset.tipo;
+      if (!groups[type]) groups[type] = [];
+      groups[type].push(asset);
+      return groups;
+    }, {});
+  };
+
+  const calculateTypeTotals = (assetsOfType) => {
+    return assetsOfType.reduce((totals, asset) => ({
+      quantidade: totals.quantidade + (asset.quantidade_atual || 0),
+      patrimonio: totals.patrimonio + ((asset.preco_atual * asset.quantidade_atual) || 0),
+      valorInvestido: totals.valorInvestido + (asset.valor_investido || 0),
+      dividendos: totals.dividendos + (asset.dividendos_recebidos || 0)
+    }), { quantidade: 0, patrimonio: 0, valorInvestido: 0, dividendos: 0 });
   };
 
 
@@ -612,8 +655,18 @@ export const InvestmentAssets = () => {
               </EmptyState>
             ) : (
               <>
-                {/* Tabela para Desktop */}
-                <Table>
+                {/* Tabelas separadas por tipo para Desktop */}
+                {Object.entries(groupAssetsByType(filteredAssets)).map(([tipo, assetsOfType]) => {
+                  const totals = calculateTypeTotals(assetsOfType);
+                  const variacaoTotalPercentual = totals.valorInvestido > 0 
+                    ? ((totals.patrimonio + totals.dividendos - totals.valorInvestido) / totals.valorInvestido) * 100 
+                    : 0;
+                  const symbol = variacaoTotalPercentual > 0 ? '▲' : variacaoTotalPercentual < 0 ? '▼' : '−';
+
+                  return (
+                    <div key={tipo}>
+                      <TypeHeader>{getTypeLabel(tipo)}</TypeHeader>
+                      <Table>
                   <thead>
                     <tr>
                       <Th>Ativo</Th>
@@ -629,7 +682,7 @@ export const InvestmentAssets = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAssets.map((asset) => (
+                          {assetsOfType.map((asset) => (
                       <Tr key={asset.id}>
                         <Td>
                           <AssetNameCell>{asset.nome}</AssetNameCell>
@@ -740,12 +793,48 @@ export const InvestmentAssets = () => {
                           </div>
                         </Td>
                       </Tr>
-                    ))}
-                  </tbody>
-                </Table>
+                          ))}
+                          <TotalRow>
+                            <Td><strong>TOTAL</strong></Td>
+                            <Td className="text-right">{formatNumber(totals.quantidade, 6)}</Td>
+                            <Td className="text-right">−</Td>
+                            <Td className="text-right">−</Td>
+                            <Td className="text-right">
+                              <PrivateValue>{formatCurrency(totals.patrimonio)}</PrivateValue>
+                            </Td>
+                            <Td className="text-right">−</Td>
+                            <Td className="text-right">
+                              <PrivateValue>{formatCurrency(totals.patrimonio - totals.valorInvestido)}</PrivateValue>
+                            </Td>
+                            <Td className="text-right">
+                              <div>
+                                {symbol} {variacaoTotalPercentual.toFixed(2)}%
+                                <div style={{fontSize: '0.75rem', marginTop: '2px', color: '#6b7280'}}>
+                                  <PrivateValue>{formatCurrency(totals.dividendos)}</PrivateValue>
+                                </div>
+                              </div>
+                            </Td>
+                            <Td>−</Td>
+                            <Td className="actions">−</Td>
+                          </TotalRow>
+                        </tbody>
+                      </Table>
+                    </div>
+                  );
+                })}
 
-                {/* Cards para Mobile */}
-                {filteredAssets.map((asset) => (
+                {/* Cards para Mobile agrupados por tipo */}
+                {Object.entries(groupAssetsByType(filteredAssets)).map(([tipo, assetsOfType]) => {
+                  const totals = calculateTypeTotals(assetsOfType);
+                  const variacaoTotalPercentual = totals.valorInvestido > 0 
+                    ? ((totals.patrimonio + totals.dividendos - totals.valorInvestido) / totals.valorInvestido) * 100 
+                    : 0;
+                  const symbol = variacaoTotalPercentual > 0 ? '▲' : variacaoTotalPercentual < 0 ? '▼' : '−';
+
+                  return (
+                    <div key={`mobile-${tipo}`}>
+                      <TypeHeader>{getTypeLabel(tipo)}</TypeHeader>
+                      {assetsOfType.map((asset) => (
                   <MobileCard key={`mobile-${asset.id}`}>
                     <MobileCardHeader>
                       <div>
@@ -864,8 +953,43 @@ export const InvestmentAssets = () => {
                         <Trash2 size={18} />
                       </ActionButton>
                     </MobileCardActions>
-                  </MobileCard>
-                ))}
+                      </MobileCard>
+                      ))}
+                      
+                      {/* Card de totais para mobile */}
+                      <MobileCard style={{background: '#f9fafb', border: '2px solid #3b82f6'}}>
+                        <MobileCardHeader>
+                          <div>
+                            <AssetNameCell><strong>TOTAL {getTypeLabel(tipo).toUpperCase()}</strong></AssetNameCell>
+                          </div>
+                        </MobileCardHeader>
+                        <MobileCardContent>
+                          <div>
+                            <strong>Qtd. Total:</strong><br />
+                            {formatNumber(totals.quantidade, 6)}
+                          </div>
+                          <div>
+                            <strong>Patrimônio:</strong><br />
+                            <PrivateValue>{formatCurrency(totals.patrimonio)}</PrivateValue>
+                          </div>
+                          <div>
+                            <strong>Variação Total:</strong><br />
+                            <PrivateValue>{formatCurrency(totals.patrimonio - totals.valorInvestido)}</PrivateValue>
+                          </div>
+                          <div>
+                            <strong>Var. % + Dividendos:</strong><br />
+                            <div>
+                              {symbol} {variacaoTotalPercentual.toFixed(2)}%
+                              <div style={{fontSize: '0.75rem', marginTop: '2px', color: '#6b7280'}}>
+                                <PrivateValue>{formatCurrency(totals.dividendos)}</PrivateValue>
+                              </div>
+                            </div>
+                          </div>
+                        </MobileCardContent>
+                      </MobileCard>
+                    </div>
+                  );
+                })}
               </>
             )}
           </CardContent>

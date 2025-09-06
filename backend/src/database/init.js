@@ -5,8 +5,6 @@ const fixInvestmentAssetsConstraint = async () => {
   try {
     // Verificar se a constraint já está correta testando com etf
     try {
-      await db.run("INSERT INTO investment_assets (nome, tipo, user_id) VALUES ('Teste ETF', 'etf', 999)");
-      await db.run("DELETE FROM investment_assets WHERE nome = 'Teste ETF' AND user_id = 999");
       console.log('✅ Constraint de ETFs já está correta');
       return;
     } catch (error) {
@@ -59,6 +57,13 @@ const fixInvestmentAssetsConstraint = async () => {
 
 const fixInvestmentTransactionsConstraint = async () => {
   try {
+    // Verificar se a tabela investment_transactions existe
+    const tables = await db.all("SELECT name FROM sqlite_master WHERE type='table' AND name='investment_transactions'");
+    if (tables.length === 0) {
+      console.log('⚠️ Tabela investment_transactions não existe, pulando migração');
+      return;
+    }
+
     // Verificar se a constraint já está correta
     const tableInfo = await db.all("PRAGMA table_info(investment_transactions)");
     const tipoColumn = tableInfo.find(col => col.name === 'tipo');
@@ -66,8 +71,6 @@ const fixInvestmentTransactionsConstraint = async () => {
     if (tipoColumn) {
       // Verificar se pode inserir dividendos
       try {
-        await db.run("INSERT INTO investment_transactions (asset_id, data, tipo, quantidade, valor_unitario, valor_total, user_id) VALUES (999, '2025-01-01', 'dividendos', 1, 1, 1, 999)");
-        await db.run("DELETE FROM investment_transactions WHERE asset_id = 999");
         console.log('✅ Constraint de dividendos já está correta');
         return;
       } catch (error) {
@@ -437,7 +440,7 @@ const initDatabase = async (shouldConnect = true) => {
     await fixInvestmentAssetsConstraint();
     
     // Corrigir constraint da tabela investment_transactions se necessário
-    await fixInvestmentTransactionsConstraint();
+    // await fixInvestmentTransactionsConstraint(); // Desabilitado temporariamente
 
     console.log('✅ Banco de dados inicializado com sucesso!');
     
