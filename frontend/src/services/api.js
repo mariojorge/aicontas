@@ -214,6 +214,11 @@ export const investmentTransactionService = {
   async delete(id) {
     const response = await api.delete(`/investment-transactions/${id}`);
     return response.data;
+  },
+
+  async getPortfolio() {
+    const response = await api.get('/investment-transactions/portfolio');
+    return response.data;
   }
 };
 

@@ -5,7 +5,7 @@ import { Container, Section, Grid } from '../components/Layout/Container';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/UI/Card';
 import { Button } from '../components/UI/Button';
 import { ConfirmModal } from '../components/UI/Modal';
-import { investmentAssetService } from '../services/api';
+import { investmentAssetService, investmentTransactionService } from '../services/api';
 
 const FilterContainer = styled.div`
   display: flex;
@@ -67,55 +67,115 @@ const SearchIcon = styled(Search)`
   height: 1rem;
 `;
 
-const AssetsList = styled.div`
-  display: grid;
-  gap: ${props => props.theme.spacing.md};
-`;
-
-const AssetItem = styled.div`
-  display: grid;
-  grid-template-columns: 1fr auto auto auto auto;
-  align-items: center;
-  padding: ${props => props.theme.spacing.md};
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: ${props => props.theme.borderRadius.md};
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: ${props => props.theme.spacing.md};
   background: white;
-  gap: ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.md};
+  overflow: hidden;
+  box-shadow: ${props => props.theme.shadows.sm};
 
+  @media (max-width: ${props => props.theme.breakpoints.tablet}) {
+    display: none;
+  }
+`;
+
+const Th = styled.th`
+  text-align: left;
+  padding: ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.backgroundSecondary};
+  border-bottom: 2px solid ${props => props.theme.colors.border};
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: ${props => props.theme.colors.text};
+  white-space: nowrap;
+  
+  &.text-right {
+    text-align: right;
+  }
+  
+  &.actions {
+    width: 120px;
+    text-align: center;
+  }
+`;
+
+const Tr = styled.tr`
   &:hover {
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: ${props => props.theme.shadows.sm};
+    background: ${props => props.theme.colors.backgroundTertiary};
   }
-
-  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
-    grid-template-columns: 1fr;
-    gap: ${props => props.theme.spacing.sm};
+  
+  &:not(:last-child) {
+    border-bottom: 1px solid ${props => props.theme.colors.border};
   }
 `;
 
-const AssetInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${props => props.theme.spacing.xs};
+const Td = styled.td`
+  padding: ${props => props.theme.spacing.md};
+  vertical-align: middle;
+  font-size: 0.875rem;
+  
+  &.text-right {
+    text-align: right;
+  }
+  
+  &.actions {
+    text-align: center;
+  }
 `;
 
-const AssetName = styled.h3`
-  font-size: 1.1rem;
+const AssetNameCell = styled.div`
   font-weight: 600;
   color: ${props => props.theme.colors.text};
-  margin: 0;
+  margin-bottom: 2px;
 `;
 
-const AssetType = styled.span`
-  font-size: 0.875rem;
+const AssetDetails = styled.div`
+  font-size: 0.75rem;
   color: ${props => props.theme.colors.textSecondary};
-  text-transform: uppercase;
+`;
+
+const ValueCell = styled.span`
   font-weight: 500;
+  color: ${props => {
+    if (props.value > 0) return props.theme.colors.success;
+    if (props.value < 0) return props.theme.colors.error;
+    return props.theme.colors.text;
+  }};
 `;
 
-const AssetSetor = styled.span`
-  font-size: 0.875rem;
-  color: ${props => props.theme.colors.textSecondary};
+const MobileCard = styled.div`
+  display: none;
+  background: white;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: ${props => props.theme.borderRadius.md};
+  padding: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
+  
+  @media (max-width: ${props => props.theme.breakpoints.tablet}) {
+    display: block;
+  }
+`;
+
+const MobileCardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: ${props => props.theme.spacing.sm};
+`;
+
+const MobileCardContent = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.md};
+`;
+
+const MobileCardActions = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.sm};
+  justify-content: flex-end;
 `;
 
 const StatusBadge = styled.span`
@@ -237,6 +297,7 @@ const ModalActions = styled.div`
 
 export const InvestmentAssets = () => {
   const [assets, setAssets] = useState([]);
+  const [portfolioData, setPortfolioData] = useState([]);
   const [filteredAssets, setFilteredAssets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -255,10 +316,11 @@ export const InvestmentAssets = () => {
 
   useEffect(() => {
     fetchAssets();
+    fetchPortfolioData();
   }, []);
 
   useEffect(() => {
-    let filtered = assets;
+    let filtered = getCombinedData();
 
     // Filtro por tipo
     if (filter !== 'all') {
@@ -274,7 +336,7 @@ export const InvestmentAssets = () => {
     }
 
     setFilteredAssets(filtered);
-  }, [assets, filter, searchTerm]);
+  }, [assets, portfolioData, filter, searchTerm]);
 
   const fetchAssets = async () => {
     try {
@@ -285,6 +347,15 @@ export const InvestmentAssets = () => {
       console.error('Erro ao carregar ativos:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchPortfolioData = async () => {
+    try {
+      const response = await investmentTransactionService.getPortfolio();
+      setPortfolioData(response.data || []);
+    } catch (error) {
+      console.error('Erro ao carregar dados de portfolio:', error);
     }
   };
 
@@ -328,6 +399,7 @@ export const InvestmentAssets = () => {
       
       closeModal();
       fetchAssets();
+      fetchPortfolioData();
     } catch (error) {
       console.error('Erro ao salvar ativo:', error);
     }
@@ -342,6 +414,7 @@ export const InvestmentAssets = () => {
       await investmentAssetService.delete(confirmModal.asset.id);
       setConfirmModal({ show: false, asset: null });
       fetchAssets();
+      fetchPortfolioData();
     } catch (error) {
       console.error('Erro ao excluir ativo:', error);
     }
@@ -351,6 +424,7 @@ export const InvestmentAssets = () => {
     try {
       await investmentAssetService.toggleActive(asset.id);
       fetchAssets();
+      fetchPortfolioData();
     } catch (error) {
       console.error('Erro ao alterar status do ativo:', error);
     }
@@ -366,6 +440,37 @@ export const InvestmentAssets = () => {
     };
     return types[tipo] || tipo;
   };
+
+  const getCombinedData = () => {
+    return assets.map(asset => {
+      const portfolio = portfolioData.find(p => p.id === asset.id) || {};
+      return {
+        ...asset,
+        quantidade_atual: portfolio.quantidade_atual || 0,
+        preco_medio: portfolio.preco_medio || 0,
+        valor_investido: portfolio.valor_investido || 0,
+        dividendos_recebidos: portfolio.dividendos_recebidos || 0,
+        total_compras: portfolio.total_compras || 0,
+        total_vendas: portfolio.total_vendas || 0
+      };
+    });
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value || 0);
+  };
+
+  const formatNumber = (value, decimals = 2) => {
+    return new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }).format(value || 0);
+  };
+
+  const combinedData = getCombinedData();
 
   return (
     <Section>
@@ -440,43 +545,144 @@ export const InvestmentAssets = () => {
                 <p>Nenhum ativo de investimento encontrado</p>
               </EmptyState>
             ) : (
-              <AssetsList>
+              <>
+                {/* Tabela para Desktop */}
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Ativo</Th>
+                      <Th className="text-right">Qtd. Atual</Th>
+                      <Th className="text-right">Preço Médio</Th>
+                      <Th className="text-right">Valor Investido</Th>
+                      <Th className="text-right">Dividendos</Th>
+                      <Th>Status</Th>
+                      <Th className="actions">Ações</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAssets.map((asset) => (
+                      <Tr key={asset.id}>
+                        <Td>
+                          <AssetNameCell>{asset.nome}</AssetNameCell>
+                          <AssetDetails>
+                            {getTypeLabel(asset.tipo)} 
+                            {asset.setor && ` • ${asset.setor}`}
+                          </AssetDetails>
+                        </Td>
+                        <Td className="text-right">
+                          {formatNumber(asset.quantidade_atual, 6)}
+                        </Td>
+                        <Td className="text-right">
+                          <ValueCell value={asset.preco_medio}>
+                            {formatCurrency(asset.preco_medio)}
+                          </ValueCell>
+                        </Td>
+                        <Td className="text-right">
+                          <ValueCell value={asset.valor_investido}>
+                            {formatCurrency(asset.valor_investido)}
+                          </ValueCell>
+                        </Td>
+                        <Td className="text-right">
+                          <ValueCell value={asset.dividendos_recebidos}>
+                            {formatCurrency(asset.dividendos_recebidos)}
+                          </ValueCell>
+                        </Td>
+                        <Td>
+                          <StatusBadge active={asset.ativo}>
+                            {asset.ativo ? 'Ativo' : 'Inativo'}
+                          </StatusBadge>
+                        </Td>
+                        <Td className="actions">
+                          <ActionButton
+                            onClick={() => handleToggleActive(asset)}
+                            title={asset.ativo ? 'Desativar' : 'Ativar'}
+                          >
+                            {asset.ativo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                          </ActionButton>
+                          <ActionButton
+                            onClick={() => openModal(asset)}
+                            title="Editar"
+                          >
+                            <Edit2 size={18} />
+                          </ActionButton>
+                          <ActionButton
+                            onClick={() => handleDelete(asset)}
+                            title="Excluir"
+                            style={{ color: '#ef4444' }}
+                          >
+                            <Trash2 size={18} />
+                          </ActionButton>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </tbody>
+                </Table>
+
+                {/* Cards para Mobile */}
                 {filteredAssets.map((asset) => (
-                  <AssetItem key={asset.id}>
-                    <AssetInfo>
-                      <AssetName>{asset.nome}</AssetName>
-                      <AssetType>{getTypeLabel(asset.tipo)}</AssetType>
-                      {asset.setor && <AssetSetor>{asset.setor}</AssetSetor>}
-                    </AssetInfo>
+                  <MobileCard key={`mobile-${asset.id}`}>
+                    <MobileCardHeader>
+                      <div>
+                        <AssetNameCell>{asset.nome}</AssetNameCell>
+                        <AssetDetails>
+                          {getTypeLabel(asset.tipo)}
+                          {asset.setor && ` • ${asset.setor}`}
+                        </AssetDetails>
+                      </div>
+                      <StatusBadge active={asset.ativo}>
+                        {asset.ativo ? 'Ativo' : 'Inativo'}
+                      </StatusBadge>
+                    </MobileCardHeader>
                     
-                    <StatusBadge active={asset.ativo}>
-                      {asset.ativo ? 'Ativo' : 'Inativo'}
-                    </StatusBadge>
+                    <MobileCardContent>
+                      <div>
+                        <strong>Qtd. Atual:</strong><br />
+                        {formatNumber(asset.quantidade_atual, 6)}
+                      </div>
+                      <div>
+                        <strong>Preço Médio:</strong><br />
+                        <ValueCell value={asset.preco_medio}>
+                          {formatCurrency(asset.preco_medio)}
+                        </ValueCell>
+                      </div>
+                      <div>
+                        <strong>Valor Investido:</strong><br />
+                        <ValueCell value={asset.valor_investido}>
+                          {formatCurrency(asset.valor_investido)}
+                        </ValueCell>
+                      </div>
+                      <div>
+                        <strong>Dividendos:</strong><br />
+                        <ValueCell value={asset.dividendos_recebidos}>
+                          {formatCurrency(asset.dividendos_recebidos)}
+                        </ValueCell>
+                      </div>
+                    </MobileCardContent>
                     
-                    <ActionButton
-                      onClick={() => handleToggleActive(asset)}
-                      title={asset.ativo ? 'Desativar' : 'Ativar'}
-                    >
-                      {asset.ativo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                    </ActionButton>
-                    
-                    <ActionButton
-                      onClick={() => openModal(asset)}
-                      title="Editar"
-                    >
-                      <Edit2 size={18} />
-                    </ActionButton>
-                    
-                    <ActionButton
-                      onClick={() => handleDelete(asset)}
-                      title="Excluir"
-                      style={{ color: '#ef4444' }}
-                    >
-                      <Trash2 size={18} />
-                    </ActionButton>
-                  </AssetItem>
+                    <MobileCardActions>
+                      <ActionButton
+                        onClick={() => handleToggleActive(asset)}
+                        title={asset.ativo ? 'Desativar' : 'Ativar'}
+                      >
+                        {asset.ativo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                      </ActionButton>
+                      <ActionButton
+                        onClick={() => openModal(asset)}
+                        title="Editar"
+                      >
+                        <Edit2 size={18} />
+                      </ActionButton>
+                      <ActionButton
+                        onClick={() => handleDelete(asset)}
+                        title="Excluir"
+                        style={{ color: '#ef4444' }}
+                      >
+                        <Trash2 size={18} />
+                      </ActionButton>
+                    </MobileCardActions>
+                  </MobileCard>
                 ))}
-              </AssetsList>
+              </>
             )}
           </CardContent>
         </Card>

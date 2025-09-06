@@ -6,6 +6,7 @@ const { authenticateToken } = require('../middleware/auth');
 // Middleware de autenticação para todas as rotas
 router.use(authenticateToken);
 
+router.get('/portfolio', investmentTransactionController.getPortfolioSummary);
 router.get('/', investmentTransactionController.getAll);
 router.get('/:id', investmentTransactionController.getById);
 router.post('/', investmentTransactionController.create);

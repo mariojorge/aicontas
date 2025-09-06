@@ -137,17 +137,42 @@ class InvestmentTransaction {
         a.id,
         a.nome,
         a.tipo,
-        COALESCE(SUM(CASE WHEN t.tipo = 'compra' THEN t.quantidade ELSE -t.quantidade END), 0) as quantidade_total,
+        a.setor,
+        a.ativo,
+        -- Quantidade atual em carteira
+        COALESCE(SUM(CASE 
+          WHEN t.tipo = 'compra' THEN t.quantidade 
+          WHEN t.tipo = 'venda' THEN -t.quantidade 
+          ELSE 0 END), 0) as quantidade_atual,
+        
+        -- Preço médio de compra (apenas compras)
         COALESCE(
-          SUM(CASE WHEN t.tipo = 'compra' THEN t.valor_total ELSE -t.valor_total END) / 
-          NULLIF(SUM(CASE WHEN t.tipo = 'compra' THEN t.quantidade ELSE -t.quantidade END), 0), 
+          SUM(CASE WHEN t.tipo = 'compra' THEN t.valor_total ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN t.tipo = 'compra' THEN t.quantidade ELSE 0 END), 0), 
           0
-        ) as preco_medio
+        ) as preco_medio,
+        
+        -- Valor investido líquido (compras - vendas)
+        COALESCE(SUM(CASE 
+          WHEN t.tipo = 'compra' THEN t.valor_total 
+          WHEN t.tipo = 'venda' THEN -t.valor_total 
+          ELSE 0 END), 0) as valor_investido,
+        
+        -- Total de dividendos recebidos
+        COALESCE(SUM(CASE 
+          WHEN t.tipo = 'dividendos' THEN t.valor_total 
+          ELSE 0 END), 0) as dividendos_recebidos,
+        
+        -- Total de compras (para referência)
+        COALESCE(SUM(CASE WHEN t.tipo = 'compra' THEN t.valor_total ELSE 0 END), 0) as total_compras,
+        
+        -- Total de vendas (para referência)
+        COALESCE(SUM(CASE WHEN t.tipo = 'venda' THEN t.valor_total ELSE 0 END), 0) as total_vendas
+        
       FROM investment_assets a
       LEFT JOIN investment_transactions t ON a.id = t.asset_id AND t.user_id = ?
       WHERE a.user_id = ? AND a.ativo = 1
-      GROUP BY a.id, a.nome, a.tipo
-      HAVING quantidade_total > 0
+      GROUP BY a.id, a.nome, a.tipo, a.setor, a.ativo
       ORDER BY a.nome
     `;
     
