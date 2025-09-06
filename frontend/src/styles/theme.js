@@ -16,6 +16,7 @@ export const theme = {
     background: '#f8fafc', // Gray-50
     backgroundSecondary: '#ffffff', // White
     backgroundTertiary: '#f1f5f9', // Gray-100
+    backgroundHover: '#f1f5f9', // Gray-100
     
     text: '#1e293b', // Gray-800
     textSecondary: '#64748b', // Gray-500
@@ -25,6 +26,7 @@ export const theme = {
     borderLight: '#f1f5f9', // Gray-100
     
     card: '#ffffff',
+    cardBackground: '#ffffff',
     cardShadow: 'rgba(0, 0, 0, 0.1)',
     
     overlay: 'rgba(0, 0, 0, 0.5)',

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, DollarSign, Eye, EyeOff, LogOut, User } from 'lucide-react';
+import { Menu, X, DollarSign, Eye, EyeOff, LogOut, User, Settings } from 'lucide-react';
 import { Container } from './Container';
+import { DropdownMenu } from '../UI/DropdownMenu';
 import { getValueVisibility, toggleValueVisibility } from '../../utils/valueVisibility';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -157,6 +158,7 @@ const LogoutButton = styled.button`
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isConfigDropdownOpen, setIsConfigDropdownOpen] = useState(false);
   const [valuesVisible, setValuesVisible] = useState(true);
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -192,6 +194,20 @@ export const Header = () => {
     closeMenu();
   };
 
+  const configItems = [
+    { path: '/categorias', label: 'Categorias' },
+    { path: '/cartoes', label: 'Cartões' }
+  ];
+
+  const handleConfigDropdown = (isOpen) => {
+    setIsConfigDropdownOpen(isOpen);
+  };
+
+  const closeConfigDropdown = () => {
+    setIsConfigDropdownOpen(false);
+    closeMenu();
+  };
+
   return (
     <HeaderContainer>
       <Container>
@@ -210,11 +226,11 @@ export const Header = () => {
               Dashboard
             </NavLink>
             <NavLink
-              to="/categorias"
+              to="/receitas"
               onClick={closeMenu}
-              className={isActive('/categorias') ? 'active' : ''}
+              className={isActive('/receitas') ? 'active' : ''}
             >
-              Categorias
+              Receitas
             </NavLink>
             <NavLink 
               to="/despesas" 
@@ -223,20 +239,18 @@ export const Header = () => {
             >
               Despesas
             </NavLink>
-            <NavLink 
-              to="/receitas" 
-              onClick={closeMenu}
-              className={isActive('/receitas') ? 'active' : ''}
-            >
-              Receitas
-            </NavLink>
-            <NavLink
-              to="/cartoes"
-              onClick={closeMenu}
-              className={isActive('/cartoes') ? 'active' : ''}
-            >
-              Cartões
-            </NavLink>
+            <DropdownMenu
+              trigger={
+                <>
+                  <Settings size={16} />
+                  Configurações
+                </>
+              }
+              items={configItems}
+              isOpen={isConfigDropdownOpen}
+              onToggle={handleConfigDropdown}
+              onClose={closeConfigDropdown}
+            />
           </Nav>
           
           <ActionButtons>
