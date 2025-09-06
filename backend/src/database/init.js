@@ -1,6 +1,62 @@
 const db = require('./connection');
 const { v4: uuidv4 } = require('uuid');
 
+const fixInvestmentAssetsConstraint = async () => {
+  try {
+    // Verificar se a constraint já está correta testando com etf
+    try {
+      await db.run("INSERT INTO investment_assets (nome, tipo, user_id) VALUES ('Teste ETF', 'etf', 999)");
+      await db.run("DELETE FROM investment_assets WHERE nome = 'Teste ETF' AND user_id = 999");
+      console.log('✅ Constraint de ETFs já está correta');
+      return;
+    } catch (error) {
+      if (error.message.includes('CHECK constraint failed')) {
+        console.log('⚠️ Corrigindo constraint da tabela investment_assets...');
+        
+        // Renomear tabela atual
+        await db.run('ALTER TABLE investment_assets RENAME TO investment_assets_old');
+        
+        // Criar nova tabela com constraint correta
+        await db.run(`
+          CREATE TABLE investment_assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            ticker TEXT,
+            tipo TEXT CHECK(tipo IN ('acao', 'fii', 'fundo', 'renda_fixa', 'etf')) NOT NULL,
+            setor TEXT,
+            descricao TEXT,
+            ativo BOOLEAN DEFAULT 1,
+            preco_atual DECIMAL(15,2),
+            data_ultima_cotacao DATE,
+            variacao_percentual DECIMAL(5,2),
+            variacao_absoluta DECIMAL(15,2),
+            user_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+          )
+        `);
+        
+        // Copiar dados da tabela antiga
+        await db.run(`
+          INSERT INTO investment_assets (id, nome, ticker, tipo, setor, descricao, ativo, preco_atual, data_ultima_cotacao, variacao_percentual, variacao_absoluta, user_id, created_at, updated_at)
+          SELECT id, nome, ticker, tipo, setor, descricao, ativo, preco_atual, data_ultima_cotacao, variacao_percentual, variacao_absoluta, user_id, created_at, updated_at
+          FROM investment_assets_old
+        `);
+        
+        // Remover tabela antiga
+        await db.run('DROP TABLE investment_assets_old');
+        
+        console.log('✅ Constraint corrigida: ETFs agora são permitidos');
+      } else {
+        throw error;
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro ao corrigir constraint de investment_assets:', error);
+  }
+};
+
 const fixInvestmentTransactionsConstraint = async () => {
   try {
     // Verificar se a constraint já está correta
@@ -376,6 +432,9 @@ const initDatabase = async (shouldConnect = true) => {
     
     // Adicionar colunas de cotação à tabela investment_assets se não existir
     await addQuotationColumns();
+    
+    // Corrigir constraint da tabela investment_assets se necessário
+    await fixInvestmentAssetsConstraint();
     
     // Corrigir constraint da tabela investment_transactions se necessário
     await fixInvestmentTransactionsConstraint();
