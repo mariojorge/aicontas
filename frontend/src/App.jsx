@@ -9,7 +9,6 @@ import { Header } from './components/Layout/Header.jsx';
 import { Dashboard } from './pages/Dashboard.jsx';
 import { Expenses } from './pages/Expenses.jsx';
 import { Incomes } from './pages/Incomes.jsx';
-import { Reports } from './pages/Reports.jsx';
 import { Categories } from './pages/Categories.jsx';
 import { CreditCards } from './pages/CreditCards.jsx';
 
@@ -30,7 +29,6 @@ function App() {
                   <Route path="/receitas" element={<Incomes />} />
                   <Route path="/categorias" element={<Categories />} />
                   <Route path="/cartoes" element={<CreditCards />} />
-                  <Route path="/relatorios" element={<Reports />} />
                 </Routes>
               </main>
             </div>

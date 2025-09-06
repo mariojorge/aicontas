@@ -237,13 +237,6 @@ export const Header = () => {
             >
               Cartões
             </NavLink>
-            <NavLink 
-              to="/relatorios" 
-              onClick={closeMenu}
-              className={isActive('/relatorios') ? 'active' : ''}
-            >
-              Relatórios
-            </NavLink>
           </Nav>
           
           <ActionButtons>

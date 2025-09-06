@@ -1,59 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { TrendingUp, TrendingDown, DollarSign, Calendar } from 'lucide-react';
+import { BarChart3, PieChart, TrendingUp, TrendingDown } from 'lucide-react';
 import { Container, Section, Grid } from '../components/Layout/Container';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/UI/Card';
 import { MonthSelector } from '../components/UI/MonthSelector';
 import { PrivateValue } from '../components/UI/PrivateValue';
+import { MonthlyCharts } from '../components/Charts/MonthlyCharts';
 import { expenseService, incomeService } from '../services/api';
 import { saveSelectedMonth, getSelectedMonth } from '../utils/sessionStorage';
 
-const StatsCard = styled(Card)`
-  text-align: center;
-`;
 
-const StatsIcon = styled.div`
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background-color: ${props => props.color}20;
-  color: ${props => props.color};
+const FilterContainer = styled.div`
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  margin: 0 auto ${props => props.theme.spacing.md};
-`;
-
-const StatsValue = styled.div`
-  font-size: 2rem;
-  font-weight: 700;
-  color: ${props => props.theme.colors.text};
-  margin-bottom: ${props => props.theme.spacing.xs};
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
   
   @media (max-width: ${props => props.theme.breakpoints.mobile}) {
-    font-size: 1.5rem;
+    gap: ${props => props.theme.spacing.sm};
   }
 `;
 
-const StatsLabel = styled.div`
-  font-size: 0.875rem;
+const CheckboxContainer = styled.label`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  cursor: pointer;
+  font-size: 1rem;
+  color: ${props => props.theme.colors.text};
+  
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: ${props => props.theme.colors.primary};
+    cursor: pointer;
+  }
+`;
+
+const CategoryItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: ${props => props.theme.spacing.sm} 0;
+  border-bottom: 1px solid ${props => props.theme.colors.borderLight};
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const CategoryName = styled.span`
+  font-weight: 500;
+  color: ${props => props.theme.colors.text};
+`;
+
+const CategoryValue = styled.span`
+  font-weight: 600;
+  color: ${props => props.type === 'expense' ? props.theme.colors.error : props.theme.colors.success};
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: ${props => props.theme.spacing.xl};
   color: ${props => props.theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-
-const BalanceCard = styled(StatsCard)`
-  background: linear-gradient(135deg, ${props => props.theme.colors.primary}, ${props => props.theme.colors.primaryLight});
-  color: white;
-  
-  ${StatsValue} {
-    color: white;
-  }
-  
-  ${StatsLabel} {
-    color: rgba(255, 255, 255, 0.8);
-  }
 `;
 
 export const Dashboard = () => {
@@ -65,54 +75,43 @@ export const Dashboard = () => {
     const saved = getSelectedMonth();
     return saved.year;
   });
-  const [stats, setStats] = useState({
-    totalIncomes: 0,
-    totalExpenses: 0,
-    pendingIncomes: 0,
-    pendingExpenses: 0,
-    balance: 0
-  });
+  const [expenseCategories, setExpenseCategories] = useState([]);
+  const [incomeCategories, setIncomeCategories] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [incomes, setIncomes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showOnlyPaid, setShowOnlyPaid] = useState(false);
 
 
-  const fetchStats = async () => {
+  const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
       
-      const [expenseStats, incomeStats] = await Promise.all([
-        expenseService.getTotalByMonth((selectedMonth + 1).toString().padStart(2, '0'), selectedYear),
-        incomeService.getTotalByMonth((selectedMonth + 1).toString().padStart(2, '0'), selectedYear)
+      const expenseSituation = showOnlyPaid ? 'pago' : null;
+      const incomeSituation = showOnlyPaid ? 'recebido' : null;
+      const monthStr = (selectedMonth + 1).toString().padStart(2, '0');
+      
+      const [expenseResponse, incomeResponse, expenseList, incomeList] = await Promise.all([
+        expenseService.getByCategory(monthStr, selectedYear, expenseSituation),
+        incomeService.getByCategory(monthStr, selectedYear, incomeSituation),
+        expenseService.getAll({ mes: monthStr, ano: selectedYear }),
+        incomeService.getAll({ mes: monthStr, ano: selectedYear })
       ]);
 
-      const totalIncomes = incomeStats.data?.total_recebido || 0;
-      const totalExpenses = expenseStats.data?.total_pago || 0;
-      const pendingIncomes = incomeStats.data?.total_aberto || 0;
-      const pendingExpenses = expenseStats.data?.total_aberto || 0;
-      const balance = totalIncomes - totalExpenses;
-
-      setStats({
-        totalIncomes,
-        totalExpenses,
-        pendingIncomes,
-        pendingExpenses,
-        balance
-      });
+      setExpenseCategories(expenseResponse.data || []);
+      setIncomeCategories(incomeResponse.data || []);
+      setExpenses(expenseList.data || []);
+      setIncomes(incomeList.data || []);
     } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error);
+      console.error('Erro ao carregar dados do dashboard:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStats();
-  }, [selectedMonth, selectedYear]);
-
-  const handleMonthChange = (month, year) => {
-    setSelectedMonth(month);
-    setSelectedYear(year);
-    saveSelectedMonth(month, year);
-  };
+    fetchDashboardData();
+  }, [selectedMonth, selectedYear, showOnlyPaid]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -121,6 +120,23 @@ export const Dashboard = () => {
     }).format(value);
   };
 
+  const handleMonthChange = (month, year) => {
+    setSelectedMonth(month);
+    setSelectedYear(year);
+    saveSelectedMonth(month, year);
+  };
+
+  if (isLoading) {
+    return (
+      <Section>
+        <Container>
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            Carregando dashboard...
+          </div>
+        </Container>
+      </Section>
+    );
+  }
 
   return (
     <Section>
@@ -129,79 +145,89 @@ export const Dashboard = () => {
           Dashboard Financeiro
         </h1>
         
-        <MonthSelector 
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-          onMonthChange={handleMonthChange}
+        <FilterContainer>
+          <MonthSelector 
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            onMonthChange={handleMonthChange}
+          />
+        </FilterContainer>
+
+        <MonthlyCharts 
+          expenses={expenses}
+          incomes={incomes}
+          expenseCategories={expenseCategories}
+          incomeCategories={incomeCategories}
         />
 
-        {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            Carregando estatísticas...
-          </div>
-        ) : (
-          <Grid columns="repeat(auto-fit, minmax(250px, 1fr))">
-            <BalanceCard>
-              <CardContent>
-                <StatsIcon color="white">
-                  <DollarSign size={28} />
-                </StatsIcon>
-                <PrivateValue>
-                  <StatsValue>{formatCurrency(stats.balance)}</StatsValue>
-                </PrivateValue>
-                <StatsLabel>Saldo do Mês</StatsLabel>
-              </CardContent>
-            </BalanceCard>
+        <FilterContainer>
+           <CheckboxContainer>
+            <input
+              type="checkbox"
+              checked={showOnlyPaid}
+              onChange={(e) => setShowOnlyPaid(e.target.checked)}
+            />
+            Exibir somente pagos/recebidos
+          </CheckboxContainer>
+        </FilterContainer>
 
-            <StatsCard>
-              <CardContent>
-                <StatsIcon color="#10b981">
-                  <TrendingUp size={28} />
-                </StatsIcon>
-                <PrivateValue>
-                  <StatsValue>{formatCurrency(stats.totalIncomes)}</StatsValue>
-                </PrivateValue>
-                <StatsLabel>Receitas Recebidas</StatsLabel>
-              </CardContent>
-            </StatsCard>
+        <Grid columns="repeat(auto-fit, minmax(400px, 1fr))" style={{ marginTop: '2rem' }}>
+          <Card>
+            <CardHeader>
+              <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <TrendingUp size={20} style={{ color: '#10b981' }} />
+                Receitas por Categoria
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {incomeCategories.length === 0 ? (
+                <EmptyState>
+                  <BarChart3 size={48} style={{ marginBottom: '1rem' }} />
+                  <p>Nenhuma receita encontrada para este mês</p>
+                </EmptyState>
+              ) : (
+                incomeCategories.map((category, index) => (
+                  <CategoryItem key={index}>
+                    <CategoryName>{category.categoria}</CategoryName>
+                    <PrivateValue>
+                      <CategoryValue type="income">
+                        {formatCurrency(category.total)}
+                      </CategoryValue>
+                    </PrivateValue>
+                  </CategoryItem>
+                ))
+              )}
+            </CardContent>
+          </Card>
 
-            <StatsCard>
-              <CardContent>
-                <StatsIcon color="#ef4444">
-                  <TrendingDown size={28} />
-                </StatsIcon>
-                <PrivateValue>
-                  <StatsValue>{formatCurrency(stats.totalExpenses)}</StatsValue>
-                </PrivateValue>
-                <StatsLabel>Despesas Pagas</StatsLabel>
-              </CardContent>
-            </StatsCard>
-
-            <StatsCard>
-              <CardContent>
-                <StatsIcon color="#f59e0b">
-                  <Calendar size={28} />
-                </StatsIcon>
-                <PrivateValue>
-                  <StatsValue>{formatCurrency(stats.pendingIncomes)}</StatsValue>
-                </PrivateValue>
-                <StatsLabel>Receitas Pendentes</StatsLabel>
-              </CardContent>
-            </StatsCard>
-
-            <StatsCard>
-              <CardContent>
-                <StatsIcon color="#f59e0b">
-                  <Calendar size={28} />
-                </StatsIcon>
-                <PrivateValue>
-                  <StatsValue>{formatCurrency(stats.pendingExpenses)}</StatsValue>
-                </PrivateValue>
-                <StatsLabel>Despesas Pendentes</StatsLabel>
-              </CardContent>
-            </StatsCard>
-          </Grid>
-        )}
+          <Card>
+            <CardHeader>
+              <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <TrendingDown size={20} style={{ color: '#ef4444' }} />
+                Despesas por Categoria
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {expenseCategories.length === 0 ? (
+                <EmptyState>
+                  <PieChart size={48} style={{ marginBottom: '1rem' }} />
+                  <p>Nenhuma despesa encontrada para este mês</p>
+                </EmptyState>
+              ) : (
+                expenseCategories.map((category, index) => (
+                  <CategoryItem key={index}>
+                    <CategoryName>{category.categoria}</CategoryName>
+                    <PrivateValue>
+                      <CategoryValue type="expense">
+                        {formatCurrency(category.total)}
+                      </CategoryValue>
+                    </PrivateValue>
+                  </CategoryItem>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
       </Container>
     </Section>
   );
