@@ -582,9 +582,87 @@ export const InvestmentAssets = () => {
 
   const combinedData = getCombinedData();
 
+  // Calcular totais gerais
+  const totalPatrimonio = filteredAssets.reduce((total, asset) => 
+    total + ((asset.preco_atual * asset.quantidade_atual) || 0), 0);
+  
+  const totalInvestido = filteredAssets.reduce((total, asset) => 
+    total + (asset.valor_investido || 0), 0);
+  
+  const totalDividendos = filteredAssets.reduce((total, asset) => 
+    total + (asset.dividendos_recebidos || 0), 0);
+  
+  const variacaoTotal = totalPatrimonio - totalInvestido;
+  const variacaoPercentual = totalInvestido > 0 ? (variacaoTotal / totalInvestido) * 100 : 0;
+  
+  const variacaoComDividendos = totalPatrimonio + totalDividendos - totalInvestido;
+  const variacaoComDividendosPercentual = totalInvestido > 0 
+    ? (variacaoComDividendos / totalInvestido) * 100 : 0;
+
   return (
     <Section>
       <Container>
+        <h1 style={{ marginBottom: '2rem', textAlign: 'center' }}>
+          Carteira de Investimentos
+        </h1>
+
+        {/* Cards de Resumo */}
+        <Grid columns="repeat(auto-fit, minmax(300px, 1fr))" style={{ marginBottom: '2rem' }}>
+          <Card>
+            <CardHeader>
+              <CardTitle style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                Patrimônio Total
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div style={{ fontSize: '1.5rem', fontWeight: '600', color: '#1f2937' }}>
+                <PrivateValue>
+                  {formatCurrency(totalPatrimonio)}
+                </PrivateValue>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                Variação Total
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div style={{ fontSize: '1.5rem', fontWeight: '600', color: variacaoTotal >= 0 ? '#10b981' : '#ef4444' }}>
+                <PrivateValue>
+                  {variacaoTotal >= 0 ? '+' : ''}{formatCurrency(variacaoTotal)}
+                </PrivateValue>
+              </div>
+              <div style={{ fontSize: '0.875rem', color: variacaoPercentual >= 0 ? '#10b981' : '#ef4444', marginTop: '4px' }}>
+                {variacaoPercentual >= 0 ? '▲' : '▼'} {Math.abs(variacaoPercentual).toFixed(2)}%
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                Variação + Dividendos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div style={{ fontSize: '1.5rem', fontWeight: '600', color: variacaoComDividendos >= 0 ? '#10b981' : '#ef4444' }}>
+                <PrivateValue>
+                  {variacaoComDividendos >= 0 ? '+' : ''}{formatCurrency(variacaoComDividendos)}
+                </PrivateValue>
+              </div>
+              <div style={{ fontSize: '0.875rem', color: variacaoComDividendosPercentual >= 0 ? '#10b981' : '#ef4444', marginTop: '4px' }}>
+                {variacaoComDividendosPercentual >= 0 ? '▲' : '▼'} {Math.abs(variacaoComDividendosPercentual).toFixed(2)}%
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
+                Dividendos: <PrivateValue>{formatCurrency(totalDividendos)}</PrivateValue>
+              </div>
+            </CardContent>
+          </Card>
+        </Grid>
+
         <Card>
           <CardHeader>
             <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
