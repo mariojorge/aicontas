@@ -253,7 +253,7 @@ const initDatabase = async (shouldConnect = true) => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         asset_id INTEGER NOT NULL,
         data DATE NOT NULL,
-        tipo TEXT CHECK(tipo IN ('compra', 'venda')) NOT NULL,
+        tipo TEXT CHECK(tipo IN ('compra', 'venda', 'dividendos')) NOT NULL,
         quantidade DECIMAL(15,6) NOT NULL,
         valor_unitario DECIMAL(15,2) NOT NULL,
         valor_total DECIMAL(15,2) NOT NULL,
@@ -392,12 +392,18 @@ const insertSampleData = async () => {
             (?, '2024-02-10', 'compra', 50, 34.20, 1710.00, ?),
             (?, '2024-03-05', 'venda', 30, 36.00, 1080.00, ?),
             (?, '2024-01-20', 'compra', 10, 128.50, 1285.00, ?),
-            (?, '2024-02-15', 'compra', 5, 132.00, 660.00, ?)
+            (?, '2024-02-15', 'compra', 5, 132.00, 660.00, ?),
+            (?, '2024-03-15', 'dividendos', 120, 0.25, 30.00, ?),
+            (?, '2024-04-15', 'dividendos', 120, 0.28, 33.60, ?),
+            (?, '2024-03-20', 'dividendos', 15, 1.50, 22.50, ?)
         `, [
           petr4Asset.id, defaultUserId,
           petr4Asset.id, defaultUserId,
           petr4Asset.id, defaultUserId,
           ivvb11Asset.id, defaultUserId,
+          ivvb11Asset.id, defaultUserId,
+          petr4Asset.id, defaultUserId,
+          petr4Asset.id, defaultUserId,
           ivvb11Asset.id, defaultUserId
         ]);
       }

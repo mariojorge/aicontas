@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { DollarSign, Plus, Edit2, Trash2, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
+import { DollarSign, Plus, Edit2, Trash2, Calendar, TrendingUp, TrendingDown, Coins } from 'lucide-react';
 import { Container, Section } from '../components/Layout/Container';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/UI/Card';
 import { Button } from '../components/UI/Button';
@@ -88,8 +88,22 @@ const TypeIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${props => props.type === 'compra' ? props.theme.colors.success : props.theme.colors.error}20;
-  color: ${props => props.type === 'compra' ? props.theme.colors.success : props.theme.colors.error};
+  background: ${props => {
+    switch(props.type) {
+      case 'compra': return `${props.theme.colors.error}20`;
+      case 'venda': return `${props.theme.colors.success}20`;
+      case 'dividendos': return `${props.theme.colors.primary}20`;
+      default: return `${props.theme.colors.error}20`;
+    }
+  }};
+  color: ${props => {
+    switch(props.type) {
+      case 'compra': return props.theme.colors.error;
+      case 'venda': return props.theme.colors.success;
+      case 'dividendos': return props.theme.colors.primary;
+      default: return props.theme.colors.error;
+    }
+  }};
 `;
 
 const TransactionInfo = styled.div`
@@ -120,7 +134,14 @@ const ValueInfo = styled.div`
 const TotalValue = styled.span`
   font-size: 1.1rem;
   font-weight: 600;
-  color: ${props => props.type === 'compra' ? props.theme.colors.error : props.theme.colors.success};
+  color: ${props => {
+    switch(props.type) {
+      case 'compra': return props.theme.colors.error;
+      case 'venda': return props.theme.colors.success;
+      case 'dividendos': return props.theme.colors.primary;
+      default: return props.theme.colors.error;
+    }
+  }};
 `;
 
 const UnitValue = styled.span`
@@ -370,6 +391,24 @@ export const InvestmentTransactions = () => {
     return asset ? asset.nome : 'Ativo não encontrado';
   };
 
+  const getTransactionIcon = (type) => {
+    switch(type) {
+      case 'compra': return <TrendingDown size={20} />;
+      case 'venda': return <TrendingUp size={20} />;
+      case 'dividendos': return <Coins size={20} />;
+      default: return <TrendingDown size={20} />;
+    }
+  };
+
+  const getTransactionSign = (type) => {
+    switch(type) {
+      case 'compra': return '-';
+      case 'venda': return '+';
+      case 'dividendos': return '+';
+      default: return '-';
+    }
+  };
+
   return (
     <Section>
       <Container>
@@ -405,6 +444,12 @@ export const InvestmentTransactions = () => {
               >
                 Vendas
               </FilterButton>
+              <FilterButton
+                active={filter === 'dividendos'}
+                onClick={() => setFilter('dividendos')}
+              >
+                Dividendos
+              </FilterButton>
               <FilterSelect
                 value={assetFilter}
                 onChange={(e) => setAssetFilter(e.target.value)}
@@ -430,7 +475,7 @@ export const InvestmentTransactions = () => {
                 {filteredTransactions.map((transaction) => (
                   <TransactionItem key={transaction.id}>
                     <TypeIcon type={transaction.tipo}>
-                      {transaction.tipo === 'compra' ? <TrendingDown size={20} /> : <TrendingUp size={20} />}
+                      {getTransactionIcon(transaction.tipo)}
                     </TypeIcon>
                     
                     <TransactionInfo>
@@ -442,7 +487,7 @@ export const InvestmentTransactions = () => {
                     
                     <ValueInfo>
                       <TotalValue type={transaction.tipo}>
-                        {transaction.tipo === 'compra' ? '-' : '+'} {formatCurrency(transaction.valor_total)}
+                        {getTransactionSign(transaction.tipo)} {formatCurrency(transaction.valor_total)}
                       </TotalValue>
                       <UnitValue>
                         {formatCurrency(transaction.valor_unitario)} por unidade
@@ -514,6 +559,7 @@ export const InvestmentTransactions = () => {
                   >
                     <option value="compra">Compra</option>
                     <option value="venda">Venda</option>
+                    <option value="dividendos">Dividendos</option>
                   </Select>
                 </FormField>
 

@@ -4,7 +4,7 @@ const yup = require('yup');
 const investmentTransactionSchema = yup.object().shape({
   asset_id: yup.number().required('Ativo é obrigatório').integer().positive(),
   data: yup.date().required('Data é obrigatória'),
-  tipo: yup.string().oneOf(['compra', 'venda'], 'Tipo deve ser "compra" ou "venda"').required('Tipo é obrigatório'),
+  tipo: yup.string().oneOf(['compra', 'venda', 'dividendos'], 'Tipo deve ser "compra", "venda" ou "dividendos"').required('Tipo é obrigatório'),
   quantidade: yup.number().required('Quantidade é obrigatória').positive('Quantidade deve ser positiva'),
   valor_unitario: yup.number().required('Valor unitário é obrigatório').positive('Valor unitário deve ser positivo'),
   valor_total: yup.number().optional()
