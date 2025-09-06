@@ -225,6 +225,22 @@ const TypeHeader = styled.h3`
   }
 `;
 
+const MobileTypeHeader = styled.h3`
+  display: none;
+  margin: ${props => props.theme.spacing.xl} 0 ${props => props.theme.spacing.md} 0;
+  color: ${props => props.theme.colors.text};
+  font-size: 1.25rem;
+  font-weight: 600;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+  
+  @media (max-width: ${props => props.theme.breakpoints.tablet}) {
+    display: block;
+  }
+`;
+
 const StatusBadge = styled.span`
   padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
   border-radius: ${props => props.theme.borderRadius.full};
@@ -833,7 +849,7 @@ export const InvestmentAssets = () => {
 
                   return (
                     <div key={`mobile-${tipo}`}>
-                      <TypeHeader>{getTypeLabel(tipo)}</TypeHeader>
+                      <MobileTypeHeader>{getTypeLabel(tipo)}</MobileTypeHeader>
                       {assetsOfType.map((asset) => (
                   <MobileCard key={`mobile-${asset.id}`}>
                     <MobileCardHeader>
