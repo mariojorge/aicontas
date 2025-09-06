@@ -222,6 +222,38 @@ export const investmentTransactionService = {
   }
 };
 
+export const quotationService = {
+  async getStatus() {
+    const response = await api.get('/quotations/status');
+    return response.data;
+  },
+  
+  async updateAll() {
+    const response = await api.post('/quotations/update');
+    return response.data;
+  },
+  
+  async updateAsset(ticker) {
+    const response = await api.post(`/quotations/update/${ticker}`);
+    return response.data;
+  },
+  
+  async runJob() {
+    const response = await api.post('/quotations/run-job');
+    return response.data;
+  },
+  
+  async getLiveQuote(ticker) {
+    const response = await api.get(`/quotations/live/${ticker}`);
+    return response.data;
+  },
+  
+  async getOutdatedAssets() {
+    const response = await api.get('/quotations/outdated');
+    return response.data;
+  }
+};
+
 export const categoryService = {
   async getAll(filters = {}) {
     const response = await api.get('/categories', { params: filters });

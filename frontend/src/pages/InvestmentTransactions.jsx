@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/UI/Card'
 import { Button } from '../components/UI/Button';
 import { ConfirmModal } from '../components/UI/Modal';
 import { investmentTransactionService, investmentAssetService } from '../services/api';
+import { PrivateValue } from '../components/UI/PrivateValue';
 
 const FilterContainer = styled.div`
   display: flex;
@@ -376,6 +377,7 @@ export const InvestmentTransactions = () => {
     }).format(value);
   };
 
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
@@ -487,10 +489,10 @@ export const InvestmentTransactions = () => {
                     
                     <ValueInfo>
                       <TotalValue type={transaction.tipo}>
-                        {getTransactionSign(transaction.tipo)} {formatCurrency(transaction.valor_total)}
+                        {getTransactionSign(transaction.tipo)} <PrivateValue>{formatCurrency(transaction.valor_total)}</PrivateValue>
                       </TotalValue>
                       <UnitValue>
-                        {formatCurrency(transaction.valor_unitario)} por unidade
+                        <PrivateValue>{formatCurrency(transaction.valor_unitario)}</PrivateValue> por unidade
                       </UnitValue>
                     </ValueInfo>
                     
@@ -590,7 +592,7 @@ export const InvestmentTransactions = () => {
                   
                   {formData.quantidade && formData.valor_unitario && (
                     <CalculatedTotal>
-                      Valor Total: {formatCurrency(calculateTotal())}
+                      Valor Total: <PrivateValue>{formatCurrency(calculateTotal())}</PrivateValue>
                     </CalculatedTotal>
                   )}
                 </FormField>

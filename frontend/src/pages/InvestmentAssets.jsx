@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { TrendingUp, Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Search } from 'lucide-react';
+import { TrendingUp, Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Search, RefreshCw } from 'lucide-react';
 import { Container, Section, Grid } from '../components/Layout/Container';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/UI/Card';
 import { Button } from '../components/UI/Button';
 import { ConfirmModal } from '../components/UI/Modal';
-import { investmentAssetService, investmentTransactionService } from '../services/api';
+import { investmentAssetService, investmentTransactionService, quotationService } from '../services/api';
+import { PrivateValue } from '../components/UI/PrivateValue';
 
 const FilterContainer = styled.div`
   display: flex;
@@ -65,6 +66,19 @@ const SearchIcon = styled(Search)`
   color: ${props => props.theme.colors.textSecondary};
   width: 1rem;
   height: 1rem;
+`;
+
+const SpinningIcon = styled(RefreshCw)`
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  animation: ${props => props.isSpinning ? 'spin 1s linear infinite' : 'none'};
 `;
 
 const Table = styled.table`
@@ -170,6 +184,10 @@ const MobileCardContent = styled.div`
   grid-template-columns: 1fr 1fr;
   gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.md};
+  
+  > div:nth-child(n+5) {
+    grid-column: 1 / -1;
+  }
 `;
 
 const MobileCardActions = styled.div`
@@ -300,6 +318,7 @@ export const InvestmentAssets = () => {
   const [portfolioData, setPortfolioData] = useState([]);
   const [filteredAssets, setFilteredAssets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdatingQuotes, setIsUpdatingQuotes] = useState(false);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -308,6 +327,7 @@ export const InvestmentAssets = () => {
   
   const [formData, setFormData] = useState({
     nome: '',
+    ticker: '',
     tipo: 'acao',
     setor: '',
     descricao: '',
@@ -364,6 +384,7 @@ export const InvestmentAssets = () => {
       setEditingAsset(asset);
       setFormData({
         nome: asset.nome,
+        ticker: asset.ticker || '',
         tipo: asset.tipo,
         setor: asset.setor || '',
         descricao: asset.descricao || '',
@@ -373,6 +394,7 @@ export const InvestmentAssets = () => {
       setEditingAsset(null);
       setFormData({
         nome: '',
+        ticker: '',
         tipo: 'acao',
         setor: '',
         descricao: '',
@@ -430,6 +452,27 @@ export const InvestmentAssets = () => {
     }
   };
 
+  const handleUpdateQuotes = async () => {
+    setIsUpdatingQuotes(true);
+    try {
+      console.log('Iniciando atualização manual de cotações...');
+      const result = await quotationService.updateAll();
+      console.log('Resultado da atualização:', result);
+      
+      // Atualizar dados após sucesso
+      await fetchAssets();
+      await fetchPortfolioData();
+      
+      // Feedback visual de sucesso (pode adicionar toast aqui no futuro)
+      alert(`Cotações atualizadas: ${result.updated || 0} ativos atualizados`);
+    } catch (error) {
+      console.error('Erro ao atualizar cotações:', error);
+      alert('Erro ao atualizar cotações. Tente novamente.');
+    } finally {
+      setIsUpdatingQuotes(false);
+    }
+  };
+
   const getTypeLabel = (tipo) => {
     const types = {
       acao: 'Ações',
@@ -469,6 +512,7 @@ export const InvestmentAssets = () => {
       maximumFractionDigits: decimals
     }).format(value || 0);
   };
+
 
   const combinedData = getCombinedData();
 
@@ -535,6 +579,21 @@ export const InvestmentAssets = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </SearchContainer>
+              
+              <Button
+                onClick={handleUpdateQuotes}
+                disabled={isUpdatingQuotes}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  minWidth: '160px',
+                  justifyContent: 'center'
+                }}
+              >
+                <SpinningIcon size={16} isSpinning={isUpdatingQuotes} />
+                {isUpdatingQuotes ? 'Atualizando...' : 'Atualizar Cotações'}
+              </Button>
             </FilterContainer>
 
             {isLoading ? (
@@ -553,6 +612,10 @@ export const InvestmentAssets = () => {
                       <Th>Ativo</Th>
                       <Th className="text-right">Qtd. Atual</Th>
                       <Th className="text-right">Preço Médio</Th>
+                      <Th className="text-right">Preço Atual</Th>
+                      <Th className="text-right">Patrimônio</Th>
+                      <Th className="text-right">Variação do Dia</Th>
+                      <Th className="text-right">Variação Total</Th>
                       <Th className="text-right">Valor Investido</Th>
                       <Th className="text-right">Dividendos</Th>
                       <Th>Status</Th>
@@ -578,13 +641,63 @@ export const InvestmentAssets = () => {
                           </ValueCell>
                         </Td>
                         <Td className="text-right">
+                          {asset.preco_atual ? (
+                            <ValueCell value={asset.preco_atual}>
+                              {formatCurrency(asset.preco_atual)}
+                            </ValueCell>
+                          ) : (
+                            <span style={{color: '#9ca3af', fontSize: '0.75rem'}}>
+                              {asset.ticker ? 'Sem cotação' : 'Sem ticker'}
+                            </span>
+                          )}
+                        </Td>
+                        <Td className="text-right">
+                          {asset.preco_atual && asset.quantidade_atual ? (
+                            <ValueCell value={asset.preco_atual * asset.quantidade_atual}>
+                              <PrivateValue>
+                                {formatCurrency(asset.preco_atual * asset.quantidade_atual)}
+                              </PrivateValue>
+                            </ValueCell>
+                          ) : (
+                            <span style={{color: '#9ca3af', fontSize: '0.75rem'}}>−</span>
+                          )}
+                        </Td>
+                        <Td className="text-right">
+                          {asset.variacao_percentual !== null && asset.variacao_percentual !== undefined ? (
+                            <ValueCell value={asset.variacao_percentual}>
+                              {asset.variacao_percentual > 0 ? '▲' : asset.variacao_percentual < 0 ? '▼' : '−'} {asset.variacao_percentual.toFixed(2)}%
+                            </ValueCell>
+                          ) : (
+                            <span style={{color: '#9ca3af', fontSize: '0.75rem'}}>−</span>
+                          )}
+                        </Td>
+                        <Td className="text-right">
+                          {asset.preco_atual && asset.quantidade_atual && asset.valor_investido ? (() => {
+                            const patrimonio = asset.preco_atual * asset.quantidade_atual;
+                            const variacaoTotal = patrimonio - asset.valor_investido;
+                            const variacaoPercentual = (variacaoTotal / asset.valor_investido) * 100;
+                            const symbol = variacaoPercentual > 0 ? '▲' : variacaoPercentual < 0 ? '▼' : '−';
+                            return (
+                              <ValueCell value={variacaoPercentual}>
+                                {symbol} <PrivateValue>{formatCurrency(variacaoTotal)}</PrivateValue> ({variacaoPercentual.toFixed(2)}%)
+                              </ValueCell>
+                            );
+                          })() : (
+                            <span style={{color: '#9ca3af', fontSize: '0.75rem'}}>−</span>
+                          )}
+                        </Td>
+                        <Td className="text-right">
                           <ValueCell value={asset.valor_investido}>
-                            {formatCurrency(asset.valor_investido)}
+                            <PrivateValue>
+                              {formatCurrency(asset.valor_investido)}
+                            </PrivateValue>
                           </ValueCell>
                         </Td>
                         <Td className="text-right">
                           <ValueCell value={asset.dividendos_recebidos}>
-                            {formatCurrency(asset.dividendos_recebidos)}
+                            <PrivateValue>
+                              {formatCurrency(asset.dividendos_recebidos)}
+                            </PrivateValue>
                           </ValueCell>
                         </Td>
                         <Td>
@@ -646,15 +759,69 @@ export const InvestmentAssets = () => {
                         </ValueCell>
                       </div>
                       <div>
+                        <strong>Preço Atual:</strong><br />
+                        {asset.preco_atual ? (
+                          <ValueCell value={asset.preco_atual}>
+                            {formatCurrency(asset.preco_atual)}
+                          </ValueCell>
+                        ) : (
+                          <span style={{color: '#9ca3af', fontSize: '0.875rem'}}>
+                            {asset.ticker ? 'Sem cotação' : 'Sem ticker'}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <strong>Patrimônio:</strong><br />
+                        {asset.preco_atual && asset.quantidade_atual ? (
+                          <ValueCell value={asset.preco_atual * asset.quantidade_atual}>
+                            <PrivateValue>
+                              {formatCurrency(asset.preco_atual * asset.quantidade_atual)}
+                            </PrivateValue>
+                          </ValueCell>
+                        ) : (
+                          <span style={{color: '#9ca3af', fontSize: '0.875rem'}}>−</span>
+                        )}
+                      </div>
+                      <div>
+                        <strong>Variação do Dia:</strong><br />
+                        {asset.variacao_percentual !== null && asset.variacao_percentual !== undefined ? (
+                          <ValueCell value={asset.variacao_percentual}>
+                            {asset.variacao_percentual > 0 ? '▲' : asset.variacao_percentual < 0 ? '▼' : '−'} {asset.variacao_percentual.toFixed(2)}%
+                          </ValueCell>
+                        ) : (
+                          <span style={{color: '#9ca3af', fontSize: '0.875rem'}}>−</span>
+                        )}
+                      </div>
+                      <div>
+                        <strong>Variação Total:</strong><br />
+                        {asset.preco_atual && asset.quantidade_atual && asset.valor_investido ? (() => {
+                          const patrimonio = asset.preco_atual * asset.quantidade_atual;
+                          const variacaoTotal = patrimonio - asset.valor_investido;
+                          const variacaoPercentual = (variacaoTotal / asset.valor_investido) * 100;
+                          const symbol = variacaoPercentual > 0 ? '▲' : variacaoPercentual < 0 ? '▼' : '−';
+                          return (
+                            <ValueCell value={variacaoPercentual}>
+                              {symbol} <PrivateValue>{formatCurrency(variacaoTotal)}</PrivateValue> ({variacaoPercentual.toFixed(2)}%)
+                            </ValueCell>
+                          );
+                        })() : (
+                          <span style={{color: '#9ca3af', fontSize: '0.875rem'}}>−</span>
+                        )}
+                      </div>
+                      <div>
                         <strong>Valor Investido:</strong><br />
                         <ValueCell value={asset.valor_investido}>
-                          {formatCurrency(asset.valor_investido)}
+                          <PrivateValue>
+                            {formatCurrency(asset.valor_investido)}
+                          </PrivateValue>
                         </ValueCell>
                       </div>
                       <div>
                         <strong>Dividendos:</strong><br />
                         <ValueCell value={asset.dividendos_recebidos}>
-                          {formatCurrency(asset.dividendos_recebidos)}
+                          <PrivateValue>
+                            {formatCurrency(asset.dividendos_recebidos)}
+                          </PrivateValue>
                         </ValueCell>
                       </div>
                     </MobileCardContent>
@@ -702,6 +869,34 @@ export const InvestmentAssets = () => {
                     onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                     required
                   />
+                </FormField>
+
+                <FormField>
+                  <Label htmlFor="ticker">
+                    Ticker 
+                    {(formData.tipo === 'acao' || formData.tipo === 'fii' || formData.tipo === 'etf') && ' *'}
+                  </Label>
+                  <Input
+                    id="ticker"
+                    type="text"
+                    placeholder="Ex: PETR4, IVVB11, VISC11"
+                    value={formData.ticker}
+                    onChange={(e) => setFormData({ ...formData, ticker: e.target.value.toUpperCase() })}
+                    required={formData.tipo === 'acao' || formData.tipo === 'fii' || formData.tipo === 'etf'}
+                    style={{
+                      textTransform: 'uppercase'
+                    }}
+                  />
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    marginTop: '4px'
+                  }}>
+                    {(formData.tipo === 'acao' || formData.tipo === 'fii' || formData.tipo === 'etf') 
+                      ? 'Código necessário para cotações automáticas (ex: PETR4, IVVB11)'
+                      : 'Deixe em branco para Renda Fixa e Fundos'
+                    }
+                  </div>
                 </FormField>
 
                 <FormField>
@@ -753,11 +948,14 @@ export const InvestmentAssets = () => {
         )}
 
         <ConfirmModal
-          show={confirmModal.show}
+          isOpen={confirmModal.show}
+          onClose={() => setConfirmModal({ show: false, asset: null })}
           title="Confirmar Exclusão"
-          message={`Deseja excluir o ativo "${confirmModal.asset?.nome}"?`}
+          description={`Deseja excluir o ativo "${confirmModal.asset?.nome}"?`}
           onConfirm={confirmDelete}
-          onCancel={() => setConfirmModal({ show: false, asset: null })}
+          confirmText="Excluir"
+          cancelText="Cancelar"
+          confirmVariant="primary"
         />
       </Container>
     </Section>

@@ -1,6 +1,104 @@
 const db = require('./connection');
 const { v4: uuidv4 } = require('uuid');
 
+const fixInvestmentTransactionsConstraint = async () => {
+  try {
+    // Verificar se a constraint já está correta
+    const tableInfo = await db.all("PRAGMA table_info(investment_transactions)");
+    const tipoColumn = tableInfo.find(col => col.name === 'tipo');
+    
+    if (tipoColumn) {
+      // Verificar se pode inserir dividendos
+      try {
+        await db.run("INSERT INTO investment_transactions (asset_id, data, tipo, quantidade, valor_unitario, valor_total, user_id) VALUES (999, '2025-01-01', 'dividendos', 1, 1, 1, 999)");
+        await db.run("DELETE FROM investment_transactions WHERE asset_id = 999");
+        console.log('✅ Constraint de dividendos já está correta');
+        return;
+      } catch (error) {
+        if (error.message.includes('CHECK constraint failed')) {
+          console.log('⚠️ Corrigindo constraint da tabela investment_transactions...');
+          
+          // Renomear tabela atual
+          await db.run('ALTER TABLE investment_transactions RENAME TO investment_transactions_old');
+          
+          // Criar nova tabela com constraint correta
+          await db.run(`
+            CREATE TABLE investment_transactions (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              asset_id INTEGER NOT NULL,
+              data DATE NOT NULL,
+              tipo TEXT CHECK(tipo IN ('compra', 'venda', 'dividendos')) NOT NULL,
+              quantidade DECIMAL(15,6) NOT NULL,
+              valor_unitario DECIMAL(15,2) NOT NULL,
+              valor_total DECIMAL(15,2) NOT NULL,
+              user_id INTEGER,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (asset_id) REFERENCES investment_assets(id) ON DELETE CASCADE,
+              FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+          `);
+          
+          // Copiar dados da tabela antiga
+          await db.run(`
+            INSERT INTO investment_transactions (id, asset_id, data, tipo, quantidade, valor_unitario, valor_total, user_id, created_at, updated_at)
+            SELECT id, asset_id, data, tipo, quantidade, valor_unitario, valor_total, user_id, created_at, updated_at
+            FROM investment_transactions_old
+          `);
+          
+          // Remover tabela antiga
+          await db.run('DROP TABLE investment_transactions_old');
+          
+          console.log('✅ Constraint corrigida: dividendos agora são permitidos');
+        } else {
+          throw error;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro ao corrigir constraint de investment_transactions:', error);
+  }
+};
+
+const addQuotationColumns = async () => {
+  try {
+    // Verificar se as colunas de cotação já existem na tabela investment_assets
+    const assetsColumns = await db.all("PRAGMA table_info(investment_assets)");
+    
+    // Adicionar ticker se não existir
+    if (!assetsColumns.find(col => col.name === 'ticker')) {
+      await db.run('ALTER TABLE investment_assets ADD COLUMN ticker TEXT');
+      console.log('✅ Coluna ticker adicionada à tabela investment_assets');
+    }
+    
+    // Adicionar preco_atual se não existir
+    if (!assetsColumns.find(col => col.name === 'preco_atual')) {
+      await db.run('ALTER TABLE investment_assets ADD COLUMN preco_atual DECIMAL(15,2)');
+      console.log('✅ Coluna preco_atual adicionada à tabela investment_assets');
+    }
+    
+    // Adicionar data_ultima_cotacao se não existir
+    if (!assetsColumns.find(col => col.name === 'data_ultima_cotacao')) {
+      await db.run('ALTER TABLE investment_assets ADD COLUMN data_ultima_cotacao DATE');
+      console.log('✅ Coluna data_ultima_cotacao adicionada à tabela investment_assets');
+    }
+    
+    // Adicionar variacao_percentual se não existir
+    if (!assetsColumns.find(col => col.name === 'variacao_percentual')) {
+      await db.run('ALTER TABLE investment_assets ADD COLUMN variacao_percentual DECIMAL(5,2)');
+      console.log('✅ Coluna variacao_percentual adicionada à tabela investment_assets');
+    }
+    
+    // Adicionar variacao_absoluta se não existir
+    if (!assetsColumns.find(col => col.name === 'variacao_absoluta')) {
+      await db.run('ALTER TABLE investment_assets ADD COLUMN variacao_absoluta DECIMAL(15,2)');
+      console.log('✅ Coluna variacao_absoluta adicionada à tabela investment_assets');
+    }
+  } catch (error) {
+    console.error('❌ Erro ao adicionar colunas de cotação:', error);
+  }
+};
+
 const addGroupIdColumns = async () => {
   try {
     // Verificar se a coluna group_id já existe nas tabelas
@@ -236,10 +334,15 @@ const initDatabase = async (shouldConnect = true) => {
       CREATE TABLE IF NOT EXISTS investment_assets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
+        ticker TEXT, -- Código da ação (PETR4, IVVB11, etc.)
         tipo TEXT CHECK(tipo IN ('acao', 'fii', 'fundo', 'renda_fixa', 'etf')) NOT NULL,
         setor TEXT,
         descricao TEXT,
         ativo BOOLEAN DEFAULT 1,
+        preco_atual DECIMAL(15,2), -- Preço atual da cotação
+        data_ultima_cotacao DATE, -- Data da última atualização
+        variacao_percentual DECIMAL(5,2), -- Variação % do dia
+        variacao_absoluta DECIMAL(15,2), -- Variação R$ do dia
         user_id INTEGER,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -270,6 +373,12 @@ const initDatabase = async (shouldConnect = true) => {
     
     // Adicionar group_id às tabelas existentes se não existir
     await addGroupIdColumns();
+    
+    // Adicionar colunas de cotação à tabela investment_assets se não existir
+    await addQuotationColumns();
+    
+    // Corrigir constraint da tabela investment_transactions se necessário
+    await fixInvestmentTransactionsConstraint();
 
     console.log('✅ Banco de dados inicializado com sucesso!');
     
@@ -364,17 +473,17 @@ const insertSampleData = async () => {
 
     if (investmentAssetCount.count === 0) {
       await db.run(`
-        INSERT INTO investment_assets (nome, tipo, setor, descricao, ativo, user_id)
+        INSERT INTO investment_assets (nome, ticker, tipo, setor, descricao, ativo, user_id)
         VALUES 
-          ('PETR4', 'acao', 'Petróleo e Gás', 'Petrobras PN', 1, ?),
-          ('ITUB4', 'acao', 'Bancos', 'Itaú Unibanco PN', 1, ?),
-          ('VISC11', 'fii', 'Shopping Centers', 'Vinci Shopping Centers FII', 1, ?),
-          ('HGLG11', 'fii', 'Logística', 'CSHG Logística FII', 1, ?),
-          ('Tesouro IPCA+ 2029', 'renda_fixa', 'Tesouro Nacional', 'Tesouro IPCA+ com Juros Semestrais 2029', 1, ?),
-          ('CDB Banco XYZ', 'renda_fixa', 'CDB', 'CDB pós-fixado CDI+2%', 1, ?),
-          ('Fundo Multimercado ABC', 'fundo', 'Multimercado', 'Fundo de investimento multimercado', 1, ?),
-          ('Fundo Imobiliário DEF', 'fundo', 'Imobiliário', 'Fundo de investimento imobiliário', 0, ?),
-          ('IVVB11', 'etf', 'Índice S&P 500', 'ETF iShares Core S&P 500', 1, ?)
+          ('PETR4', 'PETR4', 'acao', 'Petróleo e Gás', 'Petrobras PN', 1, ?),
+          ('ITUB4', 'ITUB4', 'acao', 'Bancos', 'Itaú Unibanco PN', 1, ?),
+          ('VALE3', 'VALE3', 'acao', 'Mineração', 'Vale ON', 1, ?),
+          ('BBDC4', 'BBDC4', 'acao', 'Bancos', 'Bradesco PN', 1, ?),
+          ('Tesouro IPCA+ 2029', NULL, 'renda_fixa', 'Tesouro Nacional', 'Tesouro IPCA+ com Juros Semestrais 2029', 1, ?),
+          ('CDB Banco XYZ', NULL, 'renda_fixa', 'CDB', 'CDB pós-fixado CDI+2%', 1, ?),
+          ('Fundo Multimercado ABC', NULL, 'fundo', 'Multimercado', 'Fundo de investimento multimercado', 1, ?),
+          ('Fundo Imobiliário DEF', NULL, 'fundo', 'Imobiliário', 'Fundo de investimento imobiliário', 0, ?),
+          ('VISC11', 'VISC11', 'fii', 'Shopping Centers', 'Vinci Shopping Centers FII (requer token)', 0, ?)
       `, [defaultUserId, defaultUserId, defaultUserId, defaultUserId, defaultUserId, defaultUserId, defaultUserId, defaultUserId, defaultUserId]);
     }
 

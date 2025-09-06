@@ -6,6 +6,7 @@ const investmentAssetSchema = yup.object().shape({
   tipo: yup.string().oneOf(['acao', 'fii', 'fundo', 'renda_fixa', 'etf'], 'Tipo deve ser "acao", "fii", "fundo", "renda_fixa" ou "etf"').required('Tipo é obrigatório'),
   setor: yup.string().optional(),
   descricao: yup.string().optional(),
+  ticker: yup.string().optional().nullable(),
   ativo: yup.boolean().optional()
 });
 
@@ -18,14 +19,15 @@ class InvestmentAsset {
       tipo,
       setor = null,
       descricao = null,
+      ticker = null,
       ativo = true,
       user_id
     } = data;
 
     const result = await db.run(`
-      INSERT INTO investment_assets (nome, tipo, setor, descricao, ativo, user_id) 
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [nome, tipo, setor, descricao, ativo, user_id]);
+      INSERT INTO investment_assets (nome, tipo, setor, descricao, ticker, ativo, user_id) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [nome, tipo, setor, descricao, ticker, ativo, user_id]);
 
     return { id: result.id, ...data };
   }

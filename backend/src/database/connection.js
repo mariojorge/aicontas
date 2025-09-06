@@ -15,8 +15,17 @@ class Database {
           console.error('❌ Erro ao conectar com o banco:', err.message);
           reject(err);
         } else {
-          console.log('✅ Conectado ao banco SQLite');
-          resolve(this.db);
+          // Habilitar foreign keys no SQLite
+          this.db.run('PRAGMA foreign_keys = ON', (pragmaErr) => {
+            if (pragmaErr) {
+              console.error('❌ Erro ao habilitar foreign keys:', pragmaErr.message);
+              reject(pragmaErr);
+            } else {
+              console.log('✅ Conectado ao banco SQLite');
+              console.log('✅ Foreign keys habilitadas');
+              resolve(this.db);
+            }
+          });
         }
       });
     });

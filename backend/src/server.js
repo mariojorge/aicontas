@@ -11,6 +11,7 @@ const categoryRoutes = require('./routes/categories');
 const creditCardRoutes = require('./routes/creditCards');
 const investmentAssetRoutes = require('./routes/investmentAssets');
 const investmentTransactionRoutes = require('./routes/investmentTransactions');
+const quotationRoutes = require('./routes/quotations');
 const authRoutes = require('./routes/auth');
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/credit-cards', creditCardRoutes);
 app.use('/api/investment-assets', investmentAssetRoutes);
 app.use('/api/investment-transactions', investmentTransactionRoutes);
+app.use('/api/quotations', quotationRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Finance Control API is running' });
@@ -70,6 +72,26 @@ const startServer = async () => {
     } catch (dbError) {
       console.error('⚠️  Erro na inicialização do banco (continuando):', dbError);
     }
+    
+    // Configurar cron job para cotações diárias
+    const cron = require('node-cron');
+    const dailyQuotationJob = require('./jobs/dailyQuotationJob');
+    
+    // Executar todos os dias úteis às 19h (após fechamento da bolsa)
+    // Cron: 0 19 * * 1-5 = minuto 0, hora 19, todos os dias, todos os meses, segunda a sexta
+    cron.schedule('0 19 * * 1-5', async () => {
+      console.log('\n🤖 Cron job de cotações iniciado automaticamente');
+      try {
+        await dailyQuotationJob.execute();
+      } catch (error) {
+        console.error('❌ Erro no cron job de cotações:', error.message);
+      }
+    }, {
+      scheduled: true,
+      timezone: 'America/Sao_Paulo'
+    });
+    
+    console.log('⏰ Cron job configurado: cotações diárias às 19h (seg-sex)');
     
     app.listen(PORT, () => {
       console.log(`🚀 Servidor rodando na porta ${PORT}`);
