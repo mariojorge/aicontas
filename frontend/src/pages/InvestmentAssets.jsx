@@ -136,6 +136,13 @@ const Td = styled.td`
   
   &.actions {
     text-align: center;
+    
+    > div {
+      display: flex;
+      gap: ${props => props.theme.spacing.xs};
+      justify-content: center;
+      align-items: center;
+    }
   }
 `;
 
@@ -616,8 +623,7 @@ export const InvestmentAssets = () => {
                       <Th className="text-right">Patrimônio</Th>
                       <Th className="text-right">Variação do Dia</Th>
                       <Th className="text-right">Variação Total</Th>
-                      <Th className="text-right">Valor Investido</Th>
-                      <Th className="text-right">Dividendos</Th>
+                      <Th className="text-right">Var. % + Dividendos</Th>
                       <Th>Status</Th>
                       <Th className="actions">Ações</Th>
                     </tr>
@@ -687,18 +693,23 @@ export const InvestmentAssets = () => {
                           )}
                         </Td>
                         <Td className="text-right">
-                          <ValueCell value={asset.valor_investido}>
-                            <PrivateValue>
-                              {formatCurrency(asset.valor_investido)}
-                            </PrivateValue>
-                          </ValueCell>
-                        </Td>
-                        <Td className="text-right">
-                          <ValueCell value={asset.dividendos_recebidos}>
-                            <PrivateValue>
-                              {formatCurrency(asset.dividendos_recebidos)}
-                            </PrivateValue>
-                          </ValueCell>
+                          {asset.preco_atual && asset.quantidade_atual && asset.valor_investido ? (() => {
+                            const patrimonio = asset.preco_atual * asset.quantidade_atual;
+                            const variacaoComDividendosPercentual = ((patrimonio + asset.dividendos_recebidos - asset.valor_investido) / asset.valor_investido) * 100;
+                            const symbol = variacaoComDividendosPercentual > 0 ? '▲' : variacaoComDividendosPercentual < 0 ? '▼' : '−';
+                            return (
+                              <div>
+                                <ValueCell value={variacaoComDividendosPercentual}>
+                                  {symbol} {variacaoComDividendosPercentual.toFixed(2)}%
+                                </ValueCell>
+                                <div style={{fontSize: '0.75rem', marginTop: '2px', color: '#6b7280'}}>
+                                  <PrivateValue>{formatCurrency(asset.dividendos_recebidos)}</PrivateValue>
+                                </div>
+                              </div>
+                            );
+                          })() : (
+                            <span style={{color: '#9ca3af', fontSize: '0.75rem'}}>−</span>
+                          )}
                         </Td>
                         <Td>
                           <StatusBadge active={asset.ativo}>
@@ -706,25 +717,27 @@ export const InvestmentAssets = () => {
                           </StatusBadge>
                         </Td>
                         <Td className="actions">
-                          <ActionButton
-                            onClick={() => handleToggleActive(asset)}
-                            title={asset.ativo ? 'Desativar' : 'Ativar'}
-                          >
-                            {asset.ativo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                          </ActionButton>
-                          <ActionButton
-                            onClick={() => openModal(asset)}
-                            title="Editar"
-                          >
-                            <Edit2 size={18} />
-                          </ActionButton>
-                          <ActionButton
-                            onClick={() => handleDelete(asset)}
-                            title="Excluir"
-                            style={{ color: '#ef4444' }}
-                          >
-                            <Trash2 size={18} />
-                          </ActionButton>
+                          <div>
+                            <ActionButton
+                              onClick={() => handleToggleActive(asset)}
+                              title={asset.ativo ? 'Desativar' : 'Ativar'}
+                            >
+                              {asset.ativo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                            </ActionButton>
+                            <ActionButton
+                              onClick={() => openModal(asset)}
+                              title="Editar"
+                            >
+                              <Edit2 size={18} />
+                            </ActionButton>
+                            <ActionButton
+                              onClick={() => handleDelete(asset)}
+                              title="Excluir"
+                              style={{ color: '#ef4444' }}
+                            >
+                              <Trash2 size={18} />
+                            </ActionButton>
+                          </div>
                         </Td>
                       </Tr>
                     ))}
@@ -809,20 +822,24 @@ export const InvestmentAssets = () => {
                         )}
                       </div>
                       <div>
-                        <strong>Valor Investido:</strong><br />
-                        <ValueCell value={asset.valor_investido}>
-                          <PrivateValue>
-                            {formatCurrency(asset.valor_investido)}
-                          </PrivateValue>
-                        </ValueCell>
-                      </div>
-                      <div>
-                        <strong>Dividendos:</strong><br />
-                        <ValueCell value={asset.dividendos_recebidos}>
-                          <PrivateValue>
-                            {formatCurrency(asset.dividendos_recebidos)}
-                          </PrivateValue>
-                        </ValueCell>
+                        <strong>Var. % + Dividendos:</strong><br />
+                        {asset.preco_atual && asset.quantidade_atual && asset.valor_investido ? (() => {
+                          const patrimonio = asset.preco_atual * asset.quantidade_atual;
+                          const variacaoComDividendosPercentual = ((patrimonio + asset.dividendos_recebidos - asset.valor_investido) / asset.valor_investido) * 100;
+                          const symbol = variacaoComDividendosPercentual > 0 ? '▲' : variacaoComDividendosPercentual < 0 ? '▼' : '−';
+                          return (
+                            <div>
+                              <ValueCell value={variacaoComDividendosPercentual}>
+                                {symbol} {variacaoComDividendosPercentual.toFixed(2)}%
+                              </ValueCell>
+                              <div style={{fontSize: '0.75rem', marginTop: '2px', color: '#6b7280'}}>
+                                <PrivateValue>{formatCurrency(asset.dividendos_recebidos)}</PrivateValue>
+                              </div>
+                            </div>
+                          );
+                        })() : (
+                          <span style={{color: '#9ca3af', fontSize: '0.875rem'}}>−</span>
+                        )}
                       </div>
                     </MobileCardContent>
                     
