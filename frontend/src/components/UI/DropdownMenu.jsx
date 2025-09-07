@@ -48,7 +48,7 @@ const DropdownContent = styled.div`
   top: 100%;
   left: 0;
   min-width: 200px;
-  background-color: white;
+  background-color: ${props => props.theme.colors.backgroundSecondary};
   border-radius: ${props => props.theme.borderRadius.md};
   box-shadow: ${props => props.theme.shadows.lg};
   border: 1px solid ${props => props.theme.colors.border};

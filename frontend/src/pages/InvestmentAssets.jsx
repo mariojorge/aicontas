@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import { TrendingUp, Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Search, RefreshCw } from 'lucide-react';
+import styled, { useTheme } from 'styled-components';
+import { TrendingUp, TrendingDown, Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Search, RefreshCw } from 'lucide-react';
 import { Container, Section, Grid } from '../components/Layout/Container';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/UI/Card';
 import { Button } from '../components/UI/Button';
@@ -85,7 +85,7 @@ const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
   margin-top: ${props => props.theme.spacing.md};
-  background: white;
+  background: ${props => props.theme.colors.backgroundSecondary};
   border-radius: ${props => props.theme.borderRadius.md};
   overflow: hidden;
   box-shadow: ${props => props.theme.shadows.sm};
@@ -168,7 +168,7 @@ const ValueCell = styled.span`
 
 const MobileCard = styled.div`
   display: none;
-  background: white;
+  background: ${props => props.theme.colors.backgroundSecondary};
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: ${props => props.theme.borderRadius.md};
   padding: ${props => props.theme.spacing.md};
@@ -289,13 +289,14 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${props => props.theme.colors.backgroundSecondary};
   border-radius: ${props => props.theme.borderRadius.lg};
   padding: ${props => props.theme.spacing.lg};
   width: 90%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
+  color: ${props => props.theme.colors.text};
 `;
 
 const FormField = styled.div`
@@ -315,6 +316,8 @@ const Input = styled.input`
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: ${props => props.theme.borderRadius.md};
   font-size: 1rem;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  color: ${props => props.theme.colors.text};
   
   &:focus {
     outline: none;
@@ -328,7 +331,8 @@ const Select = styled.select`
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: ${props => props.theme.borderRadius.md};
   font-size: 1rem;
-  background: white;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  color: ${props => props.theme.colors.text};
   
   &:focus {
     outline: none;
@@ -344,6 +348,8 @@ const Textarea = styled.textarea`
   font-size: 1rem;
   min-height: 80px;
   resize: vertical;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  color: ${props => props.theme.colors.text};
   
   &:focus {
     outline: none;
@@ -359,6 +365,7 @@ const ModalActions = styled.div`
 `;
 
 export const InvestmentAssets = () => {
+  const theme = useTheme();
   const [assets, setAssets] = useState([]);
   const [portfolioData, setPortfolioData] = useState([]);
   const [filteredAssets, setFilteredAssets] = useState([]);
@@ -607,15 +614,16 @@ export const InvestmentAssets = () => {
         </h1>
 
         {/* Cards de Resumo */}
-        <Grid columns="repeat(auto-fit, minmax(300px, 1fr))" style={{ marginBottom: '2rem' }}>
+        <Grid columns="repeat(auto-fit, minmax(400px, 1fr))" style={{ marginBottom: '2rem' }}>
           <Card>
             <CardHeader>
-              <CardTitle style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+              <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <TrendingUp size={20} style={{ color: theme.colors.primary }} />
                 Patrimônio Total
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div style={{ fontSize: '1.5rem', fontWeight: '600', color: '#1f2937' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: '600', color: theme.colors.text }}>
                 <PrivateValue>
                   {formatCurrency(totalPatrimonio)}
                 </PrivateValue>
@@ -625,17 +633,21 @@ export const InvestmentAssets = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+              <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {variacaoTotal >= 0 ? 
+                  <TrendingUp size={20} style={{ color: theme.colors.success }} /> : 
+                  <TrendingDown size={20} style={{ color: theme.colors.error }} />
+                }
                 Variação Total
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div style={{ fontSize: '1.5rem', fontWeight: '600', color: variacaoTotal >= 0 ? '#10b981' : '#ef4444' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: '600', color: variacaoTotal >= 0 ? theme.colors.success : theme.colors.error }}>
                 <PrivateValue>
                   {variacaoTotal >= 0 ? '+' : ''}{formatCurrency(variacaoTotal)}
                 </PrivateValue>
               </div>
-              <div style={{ fontSize: '0.875rem', color: variacaoPercentual >= 0 ? '#10b981' : '#ef4444', marginTop: '4px' }}>
+              <div style={{ fontSize: '0.875rem', color: variacaoPercentual >= 0 ? theme.colors.success : theme.colors.error, marginTop: '4px' }}>
                 {variacaoPercentual >= 0 ? '▲' : '▼'} {Math.abs(variacaoPercentual).toFixed(2)}%
               </div>
             </CardContent>
@@ -643,20 +655,24 @@ export const InvestmentAssets = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+              <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {variacaoComDividendos >= 0 ? 
+                  <TrendingUp size={20} style={{ color: theme.colors.success }} /> : 
+                  <TrendingDown size={20} style={{ color: theme.colors.error }} />
+                }
                 Variação + Dividendos
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div style={{ fontSize: '1.5rem', fontWeight: '600', color: variacaoComDividendos >= 0 ? '#10b981' : '#ef4444' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: '600', color: variacaoComDividendos >= 0 ? theme.colors.success : theme.colors.error }}>
                 <PrivateValue>
                   {variacaoComDividendos >= 0 ? '+' : ''}{formatCurrency(variacaoComDividendos)}
                 </PrivateValue>
               </div>
-              <div style={{ fontSize: '0.875rem', color: variacaoComDividendosPercentual >= 0 ? '#10b981' : '#ef4444', marginTop: '4px' }}>
+              <div style={{ fontSize: '0.875rem', color: variacaoComDividendosPercentual >= 0 ? theme.colors.success : theme.colors.error, marginTop: '4px' }}>
                 {variacaoComDividendosPercentual >= 0 ? '▲' : '▼'} {Math.abs(variacaoComDividendosPercentual).toFixed(2)}%
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
+              <div style={{ fontSize: '0.75rem', color: theme.colors.textSecondary, marginTop: '4px' }}>
                 Dividendos: <PrivateValue>{formatCurrency(totalDividendos)}</PrivateValue>
               </div>
             </CardContent>

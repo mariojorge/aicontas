@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, DollarSign, Eye, EyeOff, LogOut, User, Settings, TrendingUp } from 'lucide-react';
+import { Menu, X, DollarSign, Eye, EyeOff, LogOut, User, Settings, TrendingUp, Sun, Moon } from 'lucide-react';
 import { Container } from './Container';
 import { DropdownMenu } from '../UI/DropdownMenu';
 import { getValueVisibility, toggleValueVisibility } from '../../utils/valueVisibility';
@@ -128,6 +128,26 @@ const VisibilityButton = styled.button`
   }
 `;
 
+const ThemeButton = styled.button`
+  color: white;
+  padding: ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.md};
+  transition: ${props => props.theme.transitions.fast};
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: ${props => props.theme.colors.primaryLight};
+  }
+  
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    display: none;
+  }
+`;
+
 const UserInfo = styled.div`
   display: flex;
   align-items: center;
@@ -156,7 +176,7 @@ const LogoutButton = styled.button`
   }
 `;
 
-export const Header = () => {
+export const Header = ({ currentTheme, onThemeToggle }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isConfigDropdownOpen, setIsConfigDropdownOpen] = useState(false);
   const [isInvestmentDropdownOpen, setIsInvestmentDropdownOpen] = useState(false);
@@ -292,6 +312,13 @@ export const Header = () => {
             >
               {valuesVisible ? <Eye size={20} /> : <EyeOff size={20} />}
             </VisibilityButton>
+            <ThemeButton
+              onClick={onThemeToggle}
+              aria-label={currentTheme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'}
+              title={currentTheme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'}
+            >
+              {currentTheme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </ThemeButton>
             <LogoutButton
               onClick={handleLogout}
               aria-label="Sair"

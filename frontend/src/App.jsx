@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { GlobalStyle } from './styles/GlobalStyle';
-import { theme } from './styles/theme';
+import { lightTheme, darkTheme } from './styles/theme';
+import { getThemePreference, setThemePreference } from './utils/themePreference';
 import { AuthProvider } from './contexts/AuthContext';
 import { PrivateRoute } from './components/PrivateRoute';
 import { Header } from './components/Layout/Header.jsx';
@@ -15,6 +16,22 @@ import { InvestmentAssets } from './pages/InvestmentAssets.jsx';
 import { InvestmentTransactions } from './pages/InvestmentTransactions.jsx';
 
 function App() {
+  const [currentTheme, setCurrentTheme] = useState(() => getThemePreference());
+  
+  useEffect(() => {
+    // Aplicar tema inicial
+    const savedTheme = getThemePreference();
+    setCurrentTheme(savedTheme);
+  }, []);
+
+  const handleThemeToggle = () => {
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setCurrentTheme(newTheme);
+    setThemePreference(newTheme);
+  };
+
+  const theme = currentTheme === 'light' ? lightTheme : darkTheme;
+
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
@@ -22,7 +39,7 @@ function App() {
         <AuthProvider>
           <PrivateRoute>
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-              <Header />
+              <Header currentTheme={currentTheme} onThemeToggle={handleThemeToggle} />
               <main style={{ flex: 1 }}>
                 <Routes>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />

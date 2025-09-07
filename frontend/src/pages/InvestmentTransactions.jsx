@@ -40,7 +40,7 @@ const FilterSelect = styled.select`
   padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
   border: 2px solid ${props => props.theme.colors.border};
   border-radius: ${props => props.theme.borderRadius.md};
-  background: white;
+  background: ${props => props.theme.colors.backgroundSecondary};
   color: ${props => props.theme.colors.text};
   cursor: pointer;
   transition: all 0.2s;
@@ -68,7 +68,7 @@ const TransactionItem = styled.div`
   padding: ${props => props.theme.spacing.md};
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: ${props => props.theme.borderRadius.md};
-  background: white;
+  background: ${props => props.theme.colors.backgroundSecondary};
   gap: ${props => props.theme.spacing.md};
 
   &:hover {
@@ -188,13 +188,14 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
+  background: ${props => props.theme.colors.backgroundSecondary};
   border-radius: ${props => props.theme.borderRadius.lg};
   padding: ${props => props.theme.spacing.lg};
   width: 90%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
+  color: ${props => props.theme.colors.text};
 `;
 
 const FormField = styled.div`
@@ -214,6 +215,8 @@ const Input = styled.input`
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: ${props => props.theme.borderRadius.md};
   font-size: 1rem;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  color: ${props => props.theme.colors.text};
   
   &:focus {
     outline: none;
@@ -227,7 +230,8 @@ const Select = styled.select`
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: ${props => props.theme.borderRadius.md};
   font-size: 1rem;
-  background: white;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  color: ${props => props.theme.colors.text};
   
   &:focus {
     outline: none;
