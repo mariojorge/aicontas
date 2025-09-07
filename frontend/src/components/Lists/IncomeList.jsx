@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import { Edit2, Trash2, Calendar, DollarSign, Tag, CheckCircle, Circle } from 'lucide-react';
 import { Card, CardContent, CardGrid } from '../UI/Card';
 import { Button } from '../UI/Button';
-import { Flex } from '../Layout/Container';
 import { PrivateValue } from '../UI/PrivateValue';
 import { GroupItemsModal } from '../UI/GroupItemsModal';
 import { incomeService } from '../../services/api';
@@ -148,6 +147,32 @@ const EmptyState = styled.div`
   text-align: center;
   padding: ${props => props.theme.spacing.xxxl};
   color: ${props => props.theme.colors.textSecondary};
+`;
+
+const MobileCardActions = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.sm};
+  justify-content: flex-end;
+  margin-top: ${props => props.theme.spacing.md};
+`;
+
+const MobileActionButton = styled.button`
+  padding: ${props => props.theme.spacing.xs};
+  border: none;
+  border-radius: ${props => props.theme.borderRadius.md};
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  color: ${props => props.theme.colors.textSecondary};
+
+  &:hover {
+    background: ${props => props.theme.colors.backgroundTertiary};
+  }
 `;
 
 export const IncomeList = ({ 
@@ -366,31 +391,28 @@ export const IncomeList = ({
                 <CardValue>{formatRecorrencia(income)}</CardValue>
               </CardRow>
               
-              <Flex justify="flex-end" style={{ marginTop: '1rem' }}>
-                <Button
-                  size="small"
-                  variant={income.situacao === 'recebido' ? 'secondary' : 'success'}
+              <MobileCardActions>
+                <MobileActionButton
                   onClick={() => onToggleStatus && onToggleStatus(income)}
-                  style={{ marginRight: '0.5rem' }}
+                  title={income.situacao === 'recebido' ? 'Marcar como aberto' : 'Marcar como recebido'}
+                  style={{ color: income.situacao === 'recebido' ? '#64748b' : '#10b981' }}
                 >
-                  {income.situacao === 'recebido' ? <Circle size={16} /> : <CheckCircle size={16} />}
-                </Button>
-                <Button
-                  size="small"
-                  variant="secondary"
+                  {income.situacao === 'recebido' ? <Circle size={18} /> : <CheckCircle size={18} />}
+                </MobileActionButton>
+                <MobileActionButton
                   onClick={() => onEdit && onEdit(income)}
-                  style={{ marginRight: '0.5rem' }}
+                  title="Editar"
                 >
-                  <Edit2 size={16} />
-                </Button>
-                <Button
-                  size="small"
-                  variant="error"
+                  <Edit2 size={18} />
+                </MobileActionButton>
+                <MobileActionButton
                   onClick={() => onDelete && onDelete(income.id)}
+                  title="Excluir"
+                  style={{ color: '#ef4444' }}
                 >
-                  <Trash2 size={16} />
-                </Button>
-              </Flex>
+                  <Trash2 size={18} />
+                </MobileActionButton>
+              </MobileCardActions>
             </CardContent>
           </MobileCard>
         ))}

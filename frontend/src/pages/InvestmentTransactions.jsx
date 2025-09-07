@@ -77,7 +77,8 @@ const TransactionItem = styled.div`
   }
 
   @media (max-width: ${props => props.theme.breakpoints.mobile}) {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     gap: ${props => props.theme.spacing.sm};
   }
 `;
@@ -162,9 +163,51 @@ const ActionButton = styled.button`
   justify-content: center;
   min-width: 32px;
   height: 32px;
+  color: ${props => props.theme.colors.textSecondary};
 
   &:hover {
     background: ${props => props.theme.colors.backgroundTertiary};
+  }
+`;
+
+const MobileHeader = styled.div`
+  display: none;
+  
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    display: flex;
+    align-items: center;
+    gap: ${props => props.theme.spacing.md};
+    width: 100%;
+  }
+`;
+
+const MobileContent = styled.div`
+  display: none;
+  
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    display: flex;
+    flex-direction: column;
+    gap: ${props => props.theme.spacing.xs};
+    width: 100%;
+  }
+`;
+
+const MobileActions = styled.div`
+  display: none;
+  
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    display: flex;
+    gap: ${props => props.theme.spacing.sm};
+    justify-content: flex-end;
+    margin-top: ${props => props.theme.spacing.sm};
+  }
+`;
+
+const DesktopContent = styled.div`
+  display: contents;
+  
+  @media (max-width: ${props => props.theme.breakpoints.mobile}) {
+    display: none;
   }
 `;
 
@@ -480,40 +523,84 @@ export const InvestmentTransactions = () => {
               <TransactionsList>
                 {filteredTransactions.map((transaction) => (
                   <TransactionItem key={transaction.id}>
-                    <TypeIcon type={transaction.tipo}>
-                      {getTransactionIcon(transaction.tipo)}
-                    </TypeIcon>
+                    {/* Desktop Layout */}
+                    <DesktopContent>
+                      <TypeIcon type={transaction.tipo}>
+                        {getTransactionIcon(transaction.tipo)}
+                      </TypeIcon>
+                      
+                      <TransactionInfo>
+                        <AssetName>{transaction.asset_name}</AssetName>
+                        <TransactionDetails>
+                          {formatDate(transaction.data)} • {transaction.quantidade} {transaction.quantidade > 1 ? 'unidades' : 'unidade'}
+                        </TransactionDetails>
+                      </TransactionInfo>
+                      
+                      <ValueInfo>
+                        <TotalValue type={transaction.tipo}>
+                          {getTransactionSign(transaction.tipo)} <PrivateValue>{formatCurrency(transaction.valor_total)}</PrivateValue>
+                        </TotalValue>
+                        <UnitValue>
+                          <PrivateValue>{formatCurrency(transaction.valor_unitario)}</PrivateValue> por unidade
+                        </UnitValue>
+                      </ValueInfo>
+                      
+                      <ActionButton
+                        onClick={() => openModal(transaction)}
+                        title="Editar"
+                      >
+                        <Edit2 size={18} />
+                      </ActionButton>
+                      
+                      <ActionButton
+                        onClick={() => handleDelete(transaction)}
+                        title="Excluir"
+                        style={{ color: '#ef4444' }}
+                      >
+                        <Trash2 size={18} />
+                      </ActionButton>
+                    </DesktopContent>
+
+                    {/* Mobile Layout */}
+                    <MobileHeader>
+                      <TypeIcon type={transaction.tipo}>
+                        {getTransactionIcon(transaction.tipo)}
+                      </TypeIcon>
+                      <TransactionInfo style={{ flex: 1 }}>
+                        <AssetName>{transaction.asset_name}</AssetName>
+                        <TransactionDetails>
+                          {formatDate(transaction.data)} • {transaction.quantidade} {transaction.quantidade > 1 ? 'unidades' : 'unidade'}
+                        </TransactionDetails>
+                      </TransactionInfo>
+                    </MobileHeader>
                     
-                    <TransactionInfo>
-                      <AssetName>{transaction.asset_name}</AssetName>
-                      <TransactionDetails>
-                        {formatDate(transaction.data)} • {transaction.quantidade} {transaction.quantidade > 1 ? 'unidades' : 'unidade'}
-                      </TransactionDetails>
-                    </TransactionInfo>
+                    <MobileContent>
+                      <ValueInfo style={{ width: '100%' }}>
+                        <TotalValue type={transaction.tipo}>
+                          {getTransactionSign(transaction.tipo)} <PrivateValue>{formatCurrency(transaction.valor_total)}</PrivateValue>
+                        </TotalValue>
+                        <UnitValue>
+                          <PrivateValue>{formatCurrency(transaction.valor_unitario)}</PrivateValue> por unidade
+                        </UnitValue>
+                      </ValueInfo>
+                    </MobileContent>
                     
-                    <ValueInfo>
-                      <TotalValue type={transaction.tipo}>
-                        {getTransactionSign(transaction.tipo)} <PrivateValue>{formatCurrency(transaction.valor_total)}</PrivateValue>
-                      </TotalValue>
-                      <UnitValue>
-                        <PrivateValue>{formatCurrency(transaction.valor_unitario)}</PrivateValue> por unidade
-                      </UnitValue>
-                    </ValueInfo>
-                    
-                    <ActionButton
-                      onClick={() => openModal(transaction)}
-                      title="Editar"
-                    >
-                      <Edit2 size={18} />
-                    </ActionButton>
-                    
-                    <ActionButton
-                      onClick={() => handleDelete(transaction)}
-                      title="Excluir"
-                      style={{ color: '#ef4444' }}
-                    >
-                      <Trash2 size={18} />
-                    </ActionButton>
+                    <MobileActions>
+                      <ActionButton
+                        onClick={() => openModal(transaction)}
+                        title="Editar"
+                      >
+                        <Edit2 size={18} />
+                      </ActionButton>
+                      
+                      <ActionButton
+                        onClick={() => handleDelete(transaction)}
+                        title="Excluir"
+                        style={{ color: '#ef4444' }}
+                      >
+                        <Trash2 size={18} />
+                      </ActionButton>
+                    </MobileActions>
                   </TransactionItem>
                 ))}
               </TransactionsList>

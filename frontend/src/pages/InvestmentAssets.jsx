@@ -1067,7 +1067,7 @@ export const InvestmentAssets = () => {
                       ))}
                       
                       {/* Card de totais para mobile */}
-                      <MobileCard style={{background: '#f9fafb', border: '2px solid #3b82f6'}}>
+                      <MobileCard style={{background: theme.colors.backgroundTertiary, border: `2px solid ${theme.colors.primary}`}}>
                         <MobileCardHeader>
                           <div>
                             <AssetNameCell><strong>TOTAL {getTypeLabel(tipo).toUpperCase()}</strong></AssetNameCell>
@@ -1090,7 +1090,7 @@ export const InvestmentAssets = () => {
                             <strong>Var. % + Dividendos:</strong><br />
                             <div>
                               {symbol} {variacaoTotalPercentual.toFixed(2)}%
-                              <div style={{fontSize: '0.75rem', marginTop: '2px', color: '#6b7280'}}>
+                              <div style={{fontSize: '0.75rem', marginTop: '2px', color: theme.colors.textSecondary}}>
                                 <PrivateValue>{formatCurrency(totals.dividendos)}</PrivateValue>
                               </div>
                             </div>
