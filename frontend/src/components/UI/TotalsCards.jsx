@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, CreditCard } from 'lucide-react';
 import { useValueVisibility } from '../../utils/valueVisibility';
 
 const CardsContainer = styled.div`
@@ -49,6 +49,7 @@ const CardIcon = styled.div`
       case 'paid': return props.theme.colors.success + '20';
       case 'pending': return props.theme.colors.warning + '20';
       case 'total': return props.theme.colors.primary + '20';
+      case 'creditCard': return (props.theme.colors.info || props.theme.colors.primary) + '20';
       default: return props.theme.colors.primary + '20';
     }
   }};
@@ -57,6 +58,7 @@ const CardIcon = styled.div`
       case 'paid': return props.theme.colors.success;
       case 'pending': return props.theme.colors.warning;
       case 'total': return props.theme.colors.primary;
+      case 'creditCard': return props.theme.colors.info || props.theme.colors.primary;
       default: return props.theme.colors.primary;
     }
   }};
@@ -87,6 +89,8 @@ export const TotalsCards = ({ totals, type = 'expense' }) => {
         return <DollarSign size={20} />;
       case 'total':
         return <DollarSign size={20} />;
+      case 'creditCard':
+        return <CreditCard size={20} />;
       default:
         return <DollarSign size={20} />;
     }
@@ -167,6 +171,24 @@ export const TotalsCards = ({ totals, type = 'expense' }) => {
           <HiddenValue>••••••</HiddenValue>
         )}
       </TotalCard>
+
+      {type === 'expense' && totals.total_cartoes !== undefined && (
+        <TotalCard>
+          <CardHeader>
+            <CardTitle>Total Cartões</CardTitle>
+            <CardIcon variant="creditCard">
+              {getIcon('creditCard')}
+            </CardIcon>
+          </CardHeader>
+          {isVisible ? (
+            <CardValue>
+              {formatCurrency(totals.total_cartoes || 0)}
+            </CardValue>
+          ) : (
+            <HiddenValue>••••••</HiddenValue>
+          )}
+        </TotalCard>
+      )}
     </CardsContainer>
   );
 };

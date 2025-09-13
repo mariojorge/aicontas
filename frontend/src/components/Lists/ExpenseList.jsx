@@ -242,6 +242,51 @@ const MobileActionButton = styled.button`
   }
 `;
 
+const CreditCardRow = styled(TableRow)`
+  background-color: ${props => props.theme.colors.backgroundTertiary};
+`;
+
+const CreditCardExpenseRow = styled(TableRow)`
+  background-color: ${props => props.theme.colors.backgroundHover};
+`;
+
+const CreditCardIcon = styled(CreditCard)`
+  color: ${props => props.theme.colors.primary};
+`;
+
+const StyledValue = styled(Value)`
+  color: ${props => props.theme.colors.text};
+`;
+
+const SecondaryText = styled.span`
+  font-size: 0.875rem;
+  color: ${props => props.theme.colors.textSecondary};
+`;
+
+const IndentedCell = styled(TableCell)`
+  padding-left: 3rem;
+`;
+
+const ExpenseDetails = styled.div`
+  font-size: 0.875rem;
+  color: ${props => props.theme.colors.textSecondary};
+  margin-top: 0.25rem;
+`;
+
+const DeleteActionButton = styled(ActionButton)`
+  &:hover {
+    color: ${props => props.theme.colors.error};
+  }
+`;
+
+const StatusActionButton = styled(MobileActionButton)`
+  color: ${props => props.status === 'pago' ? props.theme.colors.textSecondary : props.theme.colors.success};
+`;
+
+const DeleteMobileButton = styled(MobileActionButton)`
+  color: ${props => props.theme.colors.error};
+`;
+
 export const ExpenseList = ({ 
   expenses = [], 
   onEdit, 
@@ -410,27 +455,27 @@ export const ExpenseList = ({
             <tbody>
               {Object.values(creditCardGroups).map((creditCard) => (
                 <React.Fragment key={`card-${creditCard.id}`}>
-                  <TableRow style={{ backgroundColor: '#f8fafc' }}>
+                  <CreditCardRow>
                     <TableCell>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <CreditCard size={20} style={{ color: '#6366f1' }} />
+                        <CreditCardIcon size={20} />
                         <div>
                           <strong>{creditCard.nome}</strong>
-                          <div style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                          <SecondaryText>
                             {creditCard.bandeira}
-                          </div>
+                          </SecondaryText>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <PrivateValue>
-                        <Value style={{ color: '#1f2937' }}>{formatCurrency(creditCard.total)}</Value>
+                        <StyledValue>{formatCurrency(creditCard.total)}</StyledValue>
                       </PrivateValue>
                     </TableCell>
                     <TableCell>
-                      <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                      <SecondaryText>
                         {creditCard.count} despesa{creditCard.count !== 1 ? 's' : ''}
-                      </span>
+                      </SecondaryText>
                     </TableCell>
                     <TableCell>
                       <ActionButtons>
@@ -449,10 +494,10 @@ export const ExpenseList = ({
                         </ActionButton>
                       </ActionButtons>
                     </TableCell>
-                  </TableRow>
+                  </CreditCardRow>
                   {expandedCards[creditCard.id] && creditCard.expenses.map((expense) => (
-                    <TableRow key={expense.id} style={{ backgroundColor: '#f9fafb' }}>
-                      <TableCell style={{ paddingLeft: '3rem' }}>
+                    <CreditCardExpenseRow key={expense.id}>
+                      <IndentedCell>
                         <div>
                           <ClickableDescription
                             clickable={isGroupClickable(expense)}
@@ -461,7 +506,7 @@ export const ExpenseList = ({
                             <strong>{expense.descricao}</strong>
                           </ClickableDescription>
                         </div>
-                      </TableCell>
+                      </IndentedCell>
                       <TableCell>
                         <PrivateValue>
                           <Value>{formatCurrency(expense.valor)}</Value>
@@ -471,9 +516,9 @@ export const ExpenseList = ({
                         <StatusBadge status={expense.situacao}>
                           {expense.situacao === 'pago' ? 'Pago' : 'Aberto'}
                         </StatusBadge>
-                        <div style={{ fontSize: '0.875rem', color: '#6B7280', marginTop: '0.25rem' }}>
+                        <ExpenseDetails>
                           {expense.categoria} • {formatDate(expense.data_pagamento)}
-                        </div>
+                        </ExpenseDetails>
                       </TableCell>
                       <TableCell>
                         <ActionButtons>
@@ -483,15 +528,15 @@ export const ExpenseList = ({
                           >
                             <Edit2 size={16} />
                           </ActionButton>
-                          <ActionButton
+                          <DeleteActionButton
                             onClick={() => onDelete && onDelete(expense.id)}
                             title="Excluir"
                           >
                             <Trash2 size={16} />
-                          </ActionButton>
+                          </DeleteActionButton>
                         </ActionButtons>
                       </TableCell>
-                    </TableRow>
+                    </CreditCardExpenseRow>
                   ))}
                 </React.Fragment>
               ))}
@@ -540,9 +585,9 @@ export const ExpenseList = ({
                 <TableCell>{expense.categoria}</TableCell>
                 <TableCell>{formatDate(expense.data_pagamento)}</TableCell>
                 <TableCell>
-                  <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                  <SecondaryText>
                     {formatRecorrencia(expense)}
-                  </span>
+                  </SecondaryText>
                 </TableCell>
                 <TableCell>
                   <ActionButtons>
@@ -558,12 +603,12 @@ export const ExpenseList = ({
                     >
                       <Edit2 size={16} />
                     </ActionButton>
-                    <ActionButton
+                    <DeleteActionButton
                       onClick={() => onDelete && onDelete(expense.id)}
                       title="Excluir"
                     >
                       <Trash2 size={16} />
-                    </ActionButton>
+                    </DeleteActionButton>
                   </ActionButtons>
                 </TableCell>
               </TableRow>
@@ -581,7 +626,7 @@ export const ExpenseList = ({
                 <CreditCardHeader>
                   <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                     <CreditCardInfo onClick={() => toggleCardExpansion(creditCard.id)} style={{ cursor: 'pointer', flex: 1 }}>
-                      <CreditCard size={24} style={{ color: '#6366f1' }} />
+                      <CreditCardIcon size={24} />
                       <CreditCardDetails>
                         <CreditCardName>{creditCard.nome}</CreditCardName>
                         <CreditCardBrand>{creditCard.bandeira}</CreditCardBrand>
@@ -668,13 +713,12 @@ export const ExpenseList = ({
                           >
                             <Edit2 size={18} />
                           </MobileActionButton>
-                          <MobileActionButton
+                          <DeleteMobileButton
                             onClick={() => onDelete && onDelete(expense.id)}
                             title="Excluir"
-                            style={{ color: '#ef4444' }}
                           >
                             <Trash2 size={18} />
-                          </MobileActionButton>
+                          </DeleteMobileButton>
                         </MobileCardActions>
                       </CardContent>
                     </MobileCard>
@@ -741,26 +785,25 @@ export const ExpenseList = ({
               </CardRow>
               
               <MobileCardActions>
-                <MobileActionButton
+                <StatusActionButton
                   onClick={() => onToggleStatus && onToggleStatus(expense)}
                   title={expense.situacao === 'pago' ? 'Marcar como aberto' : 'Marcar como pago'}
-                  style={{ color: expense.situacao === 'pago' ? '#64748b' : '#10b981' }}
+                  status={expense.situacao}
                 >
                   {expense.situacao === 'pago' ? <Circle size={18} /> : <CheckCircle size={18} />}
-                </MobileActionButton>
+                </StatusActionButton>
                 <MobileActionButton
                   onClick={() => onEdit && onEdit(expense)}
                   title="Editar"
                 >
                   <Edit2 size={18} />
                 </MobileActionButton>
-                <MobileActionButton
+                <DeleteMobileButton
                   onClick={() => onDelete && onDelete(expense.id)}
                   title="Excluir"
-                  style={{ color: '#ef4444' }}
                 >
                   <Trash2 size={18} />
-                </MobileActionButton>
+                </DeleteMobileButton>
               </MobileCardActions>
             </CardContent>
           </MobileCard>

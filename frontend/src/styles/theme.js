@@ -60,6 +60,7 @@ export const lightTheme = {
     error: '#ef4444', // Red-500
     errorLight: '#f87171', // Red-400
     warning: '#f59e0b', // Amber-500
+    info: '#6b7280', // Gray-500
     
     background: '#f8fafc', // Gray-50
     backgroundSecondary: '#ffffff', // White
@@ -76,6 +77,7 @@ export const lightTheme = {
     card: '#ffffff',
     cardBackground: '#ffffff',
     cardShadow: 'rgba(0, 0, 0, 0.1)',
+    surface: '#ffffff',
     
     overlay: 'rgba(0, 0, 0, 0.5)',
   },
@@ -96,6 +98,7 @@ export const darkTheme = {
     error: '#ef4444', // Red-500
     errorLight: '#f87171', // Red-400
     warning: '#f59e0b', // Amber-500
+    info: '#6b7280', // Gray-500
     
     background: '#0f172a', // Slate-900
     backgroundSecondary: '#1e293b', // Slate-800
@@ -112,6 +115,7 @@ export const darkTheme = {
     card: '#1e293b', // Slate-800
     cardBackground: '#1e293b', // Slate-800
     cardShadow: 'rgba(0, 0, 0, 0.3)',
+    surface: '#1e293b', // Slate-800
     
     overlay: 'rgba(0, 0, 0, 0.7)',
   },

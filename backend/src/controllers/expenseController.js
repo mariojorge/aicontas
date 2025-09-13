@@ -184,7 +184,8 @@ class ExpenseController {
     try {
       const { mes, ano } = req.params;
       const totals = await Expense.getTotalByMonth(mes, ano, req.user.id);
-      res.json({ success: true, data: totals });
+      const creditCardTotals = await Expense.getCreditCardTotalByMonth(mes, ano, req.user.id);
+      res.json({ success: true, data: { ...totals, ...creditCardTotals } });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }

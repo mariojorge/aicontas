@@ -289,6 +289,21 @@ class Expense {
     return result;
   }
 
+  static async getCreditCardTotalByMonth(mes, ano, userId) {
+    const result = await db.get(`
+      SELECT 
+        SUM(CASE WHEN cartao_credito_id IS NOT NULL THEN valor ELSE 0 END) as total_cartoes
+      FROM expenses 
+      WHERE strftime("%m", data_pagamento) = ? 
+        AND strftime("%Y", data_pagamento) = ? 
+        AND user_id = ?
+    `, [mes.toString().padStart(2, '0'), ano.toString(), userId]);
+
+    return {
+      total_cartoes: result.total_cartoes || 0
+    };
+  }
+
   static async toggleCreditCardPaymentsByMonth(cardId, mes, ano, userId) {
     if (!cardId || !mes || !ano || !userId) {
       throw new Error('Parâmetros obrigatórios não fornecidos');
