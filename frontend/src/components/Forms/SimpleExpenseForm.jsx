@@ -5,8 +5,8 @@ import { ConfirmModal } from '../UI/Modal';
 import { applyCurrencyMask, handleCurrencyKeyDown, parseCurrency, formatCurrency } from '../../utils/maskUtils';
 import { categoryService, creditCardService } from '../../services/api';
 
-export const SimpleExpenseForm = ({ onSubmit, initialData, isLoading }) => {
-  const [repetir, setRepetir] = useState(initialData?.repetir || 'nao');
+export const SimpleExpenseForm = ({ onSubmit, initialData, preservedData, isLoading }) => {
+  const [repetir, setRepetir] = useState(initialData?.repetir || (preservedData ? 'nao' : 'nao'));
   const [parcelas, setParcelas] = useState(initialData?.parcelas || 2);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [pendingData, setPendingData] = useState(null);
@@ -15,38 +15,85 @@ export const SimpleExpenseForm = ({ onSubmit, initialData, isLoading }) => {
   const [creditCards, setCreditCards] = useState([]);
   const [loadingCards, setLoadingCards] = useState(true);
   const valorInputRef = useRef(null);
-  const handleSubmit = (e) => {
+  const formRef = useRef(null);
+  const descricaoInputRef = useRef(null);
+  const handleSubmit = (e, saveAndNew = false) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const currentRepetir = formData.get('repetir');
-    
+
+    // Validação básica
+    const descricao = formData.get('descricao')?.trim();
+    const valorFormatado = formData.get('valor')?.trim();
+    const categoria = formData.get('categoria')?.trim();
+    const dataPagamento = formData.get('data_pagamento')?.trim();
+
+    if (!descricao || descricao.length < 3) {
+      alert('Descrição é obrigatória e deve ter pelo menos 3 caracteres');
+      return;
+    }
+
+    if (!valorFormatado) {
+      alert('Valor é obrigatório');
+      return;
+    }
+
+    if (!categoria) {
+      alert('Categoria é obrigatória');
+      return;
+    }
+
+    if (!dataPagamento) {
+      alert('Data de pagamento é obrigatória');
+      return;
+    }
+
     // Parse do valor com máscara
-    const valorFormatado = formData.get('valor');
     const valorNumerico = parseCurrency(valorFormatado);
-    
+
+    if (valorNumerico <= 0) {
+      alert('Valor deve ser maior que zero');
+      return;
+    }
+
     const cartaoId = formData.get('cartao_credito_id');
-    
+
     const data = {
-      descricao: formData.get('descricao'),
+      descricao,
       valor: valorNumerico,
       situacao: 'aberto',
-      categoria: formData.get('categoria'),
-      data_pagamento: formData.get('data_pagamento'),
+      categoria,
+      data_pagamento: dataPagamento,
       repetir: currentRepetir,
       parcelas: currentRepetir === 'parcelado' ? parseInt(formData.get('parcelas')) : 1,
       parcela_atual: 1,
-      cartao_credito_id: cartaoId && cartaoId !== '' ? parseInt(cartaoId) : null
+      cartao_credito_id: cartaoId && cartaoId !== '' ? parseInt(cartaoId) : null,
+      saveAndNew: saveAndNew
     };
-    
+
     // Se é edição e tem recorrência, perguntar se atualiza todos
     if (initialData && initialData.repetir && initialData.repetir !== 'nao') {
       console.log('🔄 Detectada edição com recorrência:', initialData.repetir);
-      setPendingData(data);
+      setPendingData({ ...data, saveAndNew });
       setShowUpdateModal(true);
       return;
     }
-    
+
     onSubmit(data);
+  };
+
+  const handleSaveAndNew = (e) => {
+    e.preventDefault();
+    if (formRef.current) {
+      const formEvent = new Event('submit', { bubbles: true, cancelable: true });
+      formEvent.saveAndNew = true;
+      const syntheticEvent = {
+        ...formEvent,
+        target: formRef.current,
+        preventDefault: () => {}
+      };
+      handleSubmit(syntheticEvent, true);
+    }
   };
   
   const handleUpdateAll = () => {
@@ -96,6 +143,23 @@ export const SimpleExpenseForm = ({ onSubmit, initialData, isLoading }) => {
     fetchCreditCards();
   }, []);
 
+  useEffect(() => {
+    // Limpar campos quando preservedData muda (após Salvar e Novo)
+    if (preservedData && !initialData) {
+      setTimeout(() => {
+        if (descricaoInputRef.current) {
+          descricaoInputRef.current.value = '';
+          descricaoInputRef.current.focus();
+        }
+        if (valorInputRef.current) {
+          valorInputRef.current.value = '';
+        }
+        setRepetir('nao');
+        setParcelas(2);
+      }, 100);
+    }
+  }, [preservedData, initialData]);
+
   return (
     <Card>
       <CardHeader>
@@ -104,15 +168,16 @@ export const SimpleExpenseForm = ({ onSubmit, initialData, isLoading }) => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit}>
+        <form ref={formRef} onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
             <div>
               <label>Descrição *</label>
               <input
+                ref={descricaoInputRef}
                 name="descricao"
                 required
                 placeholder="Ex: Supermercado"
-                defaultValue={initialData?.descricao}
+                defaultValue={initialData?.descricao || ''}
                 style={{
                   width: '100%',
                   padding: '0.5rem',
@@ -149,7 +214,7 @@ export const SimpleExpenseForm = ({ onSubmit, initialData, isLoading }) => {
               <select
                 name="categoria"
                 required
-                defaultValue={!loadingCategories ? initialData?.categoria : ''}
+                defaultValue={!loadingCategories ? (initialData?.categoria || preservedData?.categoria || '') : ''}
                 disabled={loadingCategories}
                 key={loadingCategories ? 'loading' : 'loaded'}
                 style={{
@@ -175,7 +240,7 @@ export const SimpleExpenseForm = ({ onSubmit, initialData, isLoading }) => {
               <label>Cartão de Crédito (Opcional)</label>
               <select
                 name="cartao_credito_id"
-                defaultValue={initialData?.cartao_credito_id || ''}
+                defaultValue={initialData?.cartao_credito_id || preservedData?.cartao_credito_id || ''}
                 disabled={loadingCards}
                 style={{
                   width: '100%',
@@ -203,7 +268,7 @@ export const SimpleExpenseForm = ({ onSubmit, initialData, isLoading }) => {
                   name="data_pagamento"
                   type="date"
                   required
-                  defaultValue={new Date().toISOString().split('T')[0]}
+                  defaultValue={preservedData?.data_pagamento || new Date().toISOString().split('T')[0]}
                   style={{
                     width: '100%',
                     padding: '0.5rem',
@@ -292,10 +357,20 @@ export const SimpleExpenseForm = ({ onSubmit, initialData, isLoading }) => {
             )}
           </div>
           
-          <div style={{ marginTop: '2rem', textAlign: 'right' }}>
-            <Button 
-              type="submit" 
-              variant="primary" 
+          <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {!initialData && (
+              <Button
+                type="button"
+                variant="primary"
+                disabled={isLoading}
+                onClick={handleSaveAndNew}
+              >
+                {isLoading ? 'Salvando...' : 'Salvar e Novo'}
+              </Button>
+            )}
+            <Button
+              type="submit"
+              variant={initialData ? "primary" : "secondary"}
               disabled={isLoading}
             >
               {isLoading ? 'Salvando...' : (initialData ? 'Atualizar' : 'Salvar')}

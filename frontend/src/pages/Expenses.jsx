@@ -15,6 +15,7 @@ export const Expenses = () => {
   const [totals, setTotals] = useState({ total_pago: 0, total_aberto: 0, total_geral: 0 });
   const [showForm, setShowForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
+  const [preservedData, setPreservedData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -74,16 +75,39 @@ export const Expenses = () => {
   const handleSubmit = async (data) => {
     try {
       setIsSubmitting(true);
-      
+
+      const { saveAndNew, ...submitData } = data;
+
       if (editingExpense) {
-        await expenseService.update(editingExpense.id, data);
+        await expenseService.update(editingExpense.id, submitData);
       } else {
-        await expenseService.create(data);
+        await expenseService.create(submitData);
       }
-      
+
       await fetchExpenses();
-      setShowForm(false);
-      setEditingExpense(null);
+
+      if (saveAndNew && !editingExpense) {
+        // Mostrar alerta de sucesso
+        alert('💾 Despesa salva com sucesso! Iniciando novo lançamento...');
+
+        // Preservar dados para novo lançamento
+        setPreservedData({
+          data_pagamento: data.data_pagamento,
+          categoria: data.categoria,
+          cartao_credito_id: data.cartao_credito_id,
+          repetir: 'nao',
+          parcelas: 2
+        });
+      } else {
+        if (!editingExpense) {
+          alert('✅ Despesa salva com sucesso!');
+        } else {
+          alert('✅ Despesa atualizada com sucesso!');
+        }
+        setShowForm(false);
+        setEditingExpense(null);
+        setPreservedData(null);
+      }
     } catch (error) {
       console.error('Erro ao salvar despesa:', error);
       alert('Erro ao salvar despesa. Tente novamente.');
@@ -143,6 +167,7 @@ export const Expenses = () => {
   const handleCancel = () => {
     setShowForm(false);
     setEditingExpense(null);
+    setPreservedData(null);
   };
 
   return (
@@ -178,6 +203,7 @@ export const Expenses = () => {
             <ExpenseForm
               onSubmit={handleSubmit}
               initialData={editingExpense}
+              preservedData={preservedData}
               isLoading={isSubmitting}
             />
             <Flex justify="flex-end" style={{ marginTop: '1rem' }}>
